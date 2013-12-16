@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:em="http://www.mozilla.org/2004/em-rdf#">
+	<Description about="urn:mozilla:install-manifest">
+		<em:id>unread-badge@streiff.net</em:id>
+		<em:name>Unread Badge</em:name>
+		<em:type>2</em:type> <!-- extension -->
+		<em:version>1.0</em:version>
+		<em:creator>Brandon Streiff</em:creator>
+		<em:targetApplication>
+			<Description>
+				<em:id>{3550f703-e582-4d05-9a08-453d09bdfdc6}</em:id>
+				<em:minVersion>10.0</em:minVersion>
+				<em:maxVersion>29.0</em:maxVersion>
+			</Description>
+		</em:targetApplication>
+		<em:targetPlatform>WINNT</em:targetPlatform>
+		<em:bootstrap>true</em:bootstrap>
+	</Description>
+</RDF>
