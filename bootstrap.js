@@ -156,7 +156,7 @@ function setActiveWindow(aWin)
 
 var gWindowObserver =
 {
-   observe: function gWindowObserver_observe(aSubject, aTopic, aData)
+   observe: function(aSubject, aTopic, aData)
    {
       // Look for domwindowopened and domwindowclosed messages
       let win = aSubject.QueryInterface(Ci.nsIDOMWindow);
@@ -255,20 +255,20 @@ function queueOverlayIconUpdate()
 /* Implementation of nsIFolderListener */
 var folderListener =
 {
-    OnItemAdded : function(parent, item, viewString)
+    OnItemAdded: function(parent, item, viewString)
     {
        queueOverlayIconUpdate();
     },
-    OnItemRemoved : function(parent, item, viewString)
+    OnItemRemoved: function(parent, item, viewString)
     {
        queueOverlayIconUpdate();
     },
-    OnItemPropertyFlagChanged : function(item, property, oldFlag, newFlag)
+    OnItemPropertyFlagChanged: function(item, property, oldFlag, newFlag)
     {
        if (property == "Status")
            queueOverlayIconUpdate();
     },
-    OnItemEvent : function(item, event)
+    OnItemEvent: function(item, event)
     {
        queueOverlayIconUpdate();
     }
@@ -284,7 +284,7 @@ function startup(aData, aReason)
   if (!taskbar.available)
      return;
   Services.ww.registerNotification(gWindowObserver);
-  mailSession.AddFolderListener(folderListener, Ci.nsIFolderListener.added|Ci.nsIFolderListener.removed|Ci.nsIFolderListener.propertyChanged|Ci.nsIFolderListener.event);
+  mailSession.AddFolderListener(folderListener, Ci.nsIFolderListener.added|Ci.nsIFolderListener.removed|Ci.nsIFolderListener.propertyFlagChanged|Ci.nsIFolderListener.event);
   findActiveWindow();
 }
 
