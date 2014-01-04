@@ -27,6 +27,8 @@ net.streiff.unreadbadge = function()
    XPCOMUtils.defineLazyServiceGetter(xpc, "taskbar", "@mozilla.org/windows-taskbar;1", "nsIWinTaskbar");
    XPCOMUtils.defineLazyServiceGetter(xpc, "acctMgr", "@mozilla.org/messenger/account-manager;1", "nsIMsgAccountManager");
    XPCOMUtils.defineLazyServiceGetter(xpc, "mailSession", "@mozilla.org/messenger/services/session;1", "nsIMsgMailSession");
+   var Application = Components.classes["@mozilla.org/steel/application;1"].getService(Components.interfaces.steelIApplication);
+   var console = Application.console;
 
    /* It'd be useful if there were a way to actually render a font, but I can't find an interface to do it.
     *
@@ -195,21 +197,68 @@ net.streiff.unreadbadge = function()
             and give us all the unread messages in this account, right? Wrong!
             Apparently you have to get all subfolders that are inboxes and do
             getNumUnread(true) on *those*. */
-         totalCount += getUnreadCountForAccountRootFolder(rootFolder);
+         totalCount += getUnreadCountForFolder(rootFolder);
       }
       return totalCount;
    }
 
-   var getUnreadCountForAccountRootFolder = function(rootFolder)
+   /* See http://mxr.mozilla.org/mozilla1.8.0/source/mailnews/base/public/nsMsgFolderFlags.h
+      for what all of these mean.
+   */
+   var nsMsgFolderFlags = {
+      Newsgroup:       0x00000001,
+      NewsHost:        0x00000002,
+      Mail:            0x00000004,
+      Directory:       0x00000008,
+      Elided:          0x00000010,
+      Virtual:         0x00000020,
+      Subscribed:      0x00000040,
+      Unused2:         0x00000080,
+      Trash:           0x00000100,
+      SentMail:        0x00000200,
+      Drafts:          0x00000400,
+      Queue:           0x00000800,
+      Inbox:           0x00001000,
+      ImapBox:         0x00002000,
+      Unused3:         0x00004000,
+      ProfileGroup:    0x00008000,
+      Unused4:         0x00010000,
+      GotNew:          0x00020000,
+      ImapServer:      0x00040000,
+      ImapPersonal:    0x00080000,
+      ImapPublic:      0x00100000,
+      ImapOtherUser:   0x00200000,
+      Templates:       0x00400000,
+      PersonalShared:  0x00800000,
+      ImapNoselect:    0x01000000,
+      CreatedOffline:  0x02000000,
+      ImapNoinferiors: 0x04000000,
+      Offline:         0x08000000,
+      OfflineEvents:   0x10000000,
+      CheckNew:        0x20000000,
+      Junk:            0x40000000
+   };
+   
+   var getUnreadCountForFolder = function(folder)
    {
       var totalCount = 0;
-      /* 0x1000 is the flag for Inboxes. */
-      var subfolders = rootFolder.getFoldersWithFlags(0x1000);
-      var subfoldersEnumerator = subfolders.enumerate();
+      var subfoldersEnumerator = folder.subFolders;
       while (subfoldersEnumerator.hasMoreElements())
       {
-         var folder = subfoldersEnumerator.getNext().QueryInterface(Ci.nsIMsgFolder);
-         totalCount += folder.getNumUnread(true);
+         var subfolder = subfoldersEnumerator.getNext().QueryInterface(Ci.nsIMsgFolder);
+
+         /* If there are subfolders, recurse. */
+         if (subfolder.hasSubFolders)
+            totalCount += getUnreadCountForFolder(subfolder);
+
+         /* Only add to the unread count if it's not Junk/Drafts/Trash/Sent. */
+         if (!(subfolder.getFlag(nsMsgFolderFlags.Junk) ||
+               subfolder.getFlag(nsMsgFolderFlags.Drafts) ||
+               subfolder.getFlag(nsMsgFolderFlags.Trash) ||
+               subfolder.getFlag(nsMsgFolderFlags.SentMail)))
+         {
+            totalCount += subfolder.getNumUnread(false);
+         }
       }
       return totalCount;
    }
