@@ -17,7 +17,53 @@ net.streiff.unreadbadge = function()
 {
    const Cc = Components.classes;
    const Ci = Components.interfaces;
-   
+
+   /* See http://mxr.mozilla.org/mozilla1.8.0/source/mailnews/base/public/nsMsgFolderFlags.h
+      for what all of these mean.
+   */
+   const nsMsgFolderFlags = {
+      Newsgroup:       0x00000001,
+      NewsHost:        0x00000002,
+      Mail:            0x00000004,
+      Directory:       0x00000008,
+      Elided:          0x00000010,
+      Virtual:         0x00000020,
+      Subscribed:      0x00000040,
+      Unused2:         0x00000080,
+      Trash:           0x00000100,
+      SentMail:        0x00000200,
+      Drafts:          0x00000400,
+      Queue:           0x00000800,
+      Inbox:           0x00001000,
+      ImapBox:         0x00002000,
+      Unused3:         0x00004000,
+      ProfileGroup:    0x00008000,
+      Unused4:         0x00010000,
+      GotNew:          0x00020000,
+      ImapServer:      0x00040000,
+      ImapPersonal:    0x00080000,
+      ImapPublic:      0x00100000,
+      ImapOtherUser:   0x00200000,
+      Templates:       0x00400000,
+      PersonalShared:  0x00800000,
+      ImapNoselect:    0x01000000,
+      CreatedOffline:  0x02000000,
+      ImapNoinferiors: 0x04000000,
+      Offline:         0x08000000,
+      OfflineEvents:   0x10000000,
+      CheckNew:        0x20000000,
+      Junk:            0x40000000
+   };
+
+   const prefsPrefix = "extensions.unreadbadge.";
+   const defaultPrefs = {
+      "badgeColor": "#FF0000",
+      "ignoreJunk": true,
+      "ignoreDrafts": true,
+      "ignoreTrash": true,
+      "ignoreSent": true
+   };
+
    Components.utils.import("resource://gre/modules/Services.jsm");
    Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
@@ -30,6 +76,49 @@ net.streiff.unreadbadge = function()
    var Application = Components.classes["@mozilla.org/steel/application;1"].getService(Components.interfaces.steelIApplication);
    var console = Application.console;
 
+   var setDefaultPreferences = function()
+   {
+      let branch = Services.prefs.getDefaultBranch(prefsPrefix);
+      for (let [key, value] in Iterator(defaultPrefs))
+      {
+         if (typeof value == "boolean")
+            branch.setBoolPref(key, value);
+         else if (typeof value == "number")
+            branch.setIntPref(key, value);
+         else if (typeof value == "string")
+            branch.setCharPref(key, value);
+      }
+   }
+
+   var Color = function(str_or_r, g, b, a)
+   {
+      if (typeof str_or_r == "string")
+      {
+         // str can be #rrggbb, or #rrggbbaa. If alpha is not given, defaults to 255.
+         let str = str_or_r.replace("#", "");
+         this.r = (str.length >= 2 ? parseInt(str.substr(0, 2), 16) : 0);
+         this.g = (str.length >= 4 ? parseInt(str.substr(2, 2), 16) : 0);
+         this.b = (str.length >= 6 ? parseInt(str.substr(4, 2), 16) : 0);
+         this.a = (str.length >= 8 ? parseInt(str.substr(6, 2), 16) : 255);
+      }
+      else
+      {
+         this.r = (str_or_r !== undefined) ? str_or_r : 0;
+         this.g = (g !== undefined) ? g : 0;
+         this.b = (b !== undefined) ? b : 0;
+         this.a = (a !== undefined) ? a : 255;
+      }
+   }
+   Color.prototype.padHex = function(n)
+   {
+      var hex = n.toString(16);
+      return (hex.length == 1 ? "0" + hex : hex);
+   }
+   Color.prototype.toString = function()
+   {
+      return "#" + this.padHex(this.r) + this.padHex(this.g) + this.padHex(this.b);
+   }
+   
    var BadgeImage = function(w, h)
    {
       this.data = new Uint8ClampedArray(w*h*4);
@@ -38,17 +127,17 @@ net.streiff.unreadbadge = function()
       this.stride = w*4;
    };
 
-   BadgeImage.prototype.drawRect = function(x, y, w, h, r, g, b, a)
+   BadgeImage.prototype.drawRect = function(x, y, w, h, color)
    {
       for (let i = 0; i < h; i++)
       {
          for (let j = 0; j < w; j++)
          {
             let offset = ((y+i)*this.stride) + ((x+j)*4);
-            this.data[offset  ] = r;
-            this.data[offset+1] = g;
-            this.data[offset+2] = b;
-            this.data[offset+3] = a;
+            this.data[offset  ] = color.r;
+            this.data[offset+1] = color.g;
+            this.data[offset+2] = color.b;
+            this.data[offset+3] = color.a;
          }
       }
    }
@@ -119,11 +208,14 @@ net.streiff.unreadbadge = function()
 
    var createBadgeBackground = function(badge)
    {
+      let badgeColor = new Color(Services.prefs.getCharPref(prefsPrefix + "badgeColor"));
+      let shadow = new Color(0, 0, 0, 128);
+
       /* Draw a 15x15 square. */
-      badge.drawRect(0, 0, 15, 15, 255, 0, 0, 255);
+      badge.drawRect(0, 0, 15, 15, badgeColor);
       /* Draw a drop-shadow. */
-      badge.drawRect(1, 15, 15, 1, 0, 0, 0, 128);
-      badge.drawRect(15, 1, 1, 15, 0, 0, 0, 128);
+      badge.drawRect(1, 15, 15, 1, shadow);
+      badge.drawRect(15, 1, 1, 15, shadow);
    }
    
    /* Make a badge icon for an unread message count of 'msgCount'.
@@ -216,6 +308,17 @@ net.streiff.unreadbadge = function()
       let accounts = xpc.acctMgr.accounts;
       let totalCount = 0;
       let accountEnumerator = accounts.enumerate();
+      let ignoreMask = 0;
+
+      if (Services.prefs.getBoolPref(prefsPrefix + "ignoreJunk"))
+         ignoreMask |= nsMsgFolderFlags.Junk;
+      if (Services.prefs.getBoolPref(prefsPrefix + "ignoreDrafts"))
+         ignoreMask |= nsMsgFolderFlags.Drafts;
+      if (Services.prefs.getBoolPref(prefsPrefix + "ignoreTrash"))
+         ignoreMask |= nsMsgFolderFlags.Trash;
+      if (Services.prefs.getBoolPref(prefsPrefix + "ignoreSent"))
+         ignoreMask |= nsMsgFolderFlags.SentMail;
+
       while (accountEnumerator.hasMoreElements())
       {
          let account = accountEnumerator.getNext().QueryInterface(Ci.nsIMsgAccount);
@@ -225,49 +328,12 @@ net.streiff.unreadbadge = function()
             and give us all the unread messages in this account, right? Wrong!
             Apparently you have to get all subfolders that are inboxes and do
             getNumUnread(true) on *those*. */
-         totalCount += getUnreadCountForFolder(rootFolder);
+         totalCount += getUnreadCountForFolder(rootFolder, ignoreMask);
       }
       return totalCount;
    }
-
-   /* See http://mxr.mozilla.org/mozilla1.8.0/source/mailnews/base/public/nsMsgFolderFlags.h
-      for what all of these mean.
-   */
-   var nsMsgFolderFlags = {
-      Newsgroup:       0x00000001,
-      NewsHost:        0x00000002,
-      Mail:            0x00000004,
-      Directory:       0x00000008,
-      Elided:          0x00000010,
-      Virtual:         0x00000020,
-      Subscribed:      0x00000040,
-      Unused2:         0x00000080,
-      Trash:           0x00000100,
-      SentMail:        0x00000200,
-      Drafts:          0x00000400,
-      Queue:           0x00000800,
-      Inbox:           0x00001000,
-      ImapBox:         0x00002000,
-      Unused3:         0x00004000,
-      ProfileGroup:    0x00008000,
-      Unused4:         0x00010000,
-      GotNew:          0x00020000,
-      ImapServer:      0x00040000,
-      ImapPersonal:    0x00080000,
-      ImapPublic:      0x00100000,
-      ImapOtherUser:   0x00200000,
-      Templates:       0x00400000,
-      PersonalShared:  0x00800000,
-      ImapNoselect:    0x01000000,
-      CreatedOffline:  0x02000000,
-      ImapNoinferiors: 0x04000000,
-      Offline:         0x08000000,
-      OfflineEvents:   0x10000000,
-      CheckNew:        0x20000000,
-      Junk:            0x40000000
-   };
-   
-   var getUnreadCountForFolder = function(folder)
+ 
+   var getUnreadCountForFolder = function(folder, ignoreMask)
    {
       var totalCount = 0;
       var subfoldersEnumerator = folder.subFolders;
@@ -277,16 +343,11 @@ net.streiff.unreadbadge = function()
 
          /* If there are subfolders, recurse. */
          if (subfolder.hasSubFolders)
-            totalCount += getUnreadCountForFolder(subfolder);
+            totalCount += getUnreadCountForFolder(subfolder, ignoreMask);
 
-         /* Only add to the unread count if it's not Junk/Drafts/Trash/Sent. */
-         if (!(subfolder.getFlag(nsMsgFolderFlags.Junk) ||
-               subfolder.getFlag(nsMsgFolderFlags.Drafts) ||
-               subfolder.getFlag(nsMsgFolderFlags.Trash) ||
-               subfolder.getFlag(nsMsgFolderFlags.SentMail)))
-         {
+         /* Only add to the unread count if it's not a type we want to ignore. */
+         if ((subfolder.flags & ignoreMask) == 0)
             totalCount += subfolder.getNumUnread(false);
-         }
       }
       return totalCount;
    }
@@ -358,6 +419,13 @@ net.streiff.unreadbadge = function()
        }
    };
 
+   var gPrefsObserver = {
+      observe: function(aSubject, aTopic, aData)
+      {
+         queueOverlayIconUpdate();
+      }
+   };
+   
    /* The exported interface */
    return {
       install: function()
@@ -366,16 +434,19 @@ net.streiff.unreadbadge = function()
       },
       startup: function(aData, aReason)
       {
+         setDefaultPreferences();
          if (!xpc.taskbar.available)
             return;
          Services.ww.registerNotification(gWindowObserver);
          xpc.mailSession.AddFolderListener(folderListener, Ci.nsIFolderListener.added|Ci.nsIFolderListener.removed|Ci.nsIFolderListener.propertyFlagChanged|Ci.nsIFolderListener.event);
+         Services.prefs.addObserver(prefsPrefix, gPrefsObserver, false);
          findActiveWindow();
       },
       shutdown: function(aData, aReason)
       {
          xpc.mailSession.RemoveFolderListener(folderListener);
          Services.ww.unregisterNotification(gWindowObserver);
+         Services.prefs.removeObserver(prefsPrefix, gPrefsObserver);
          clearOverlayIcon();
       },
       uninstall: function()
