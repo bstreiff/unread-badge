@@ -30,110 +30,39 @@ net.streiff.unreadbadge = function()
    var Application = Components.classes["@mozilla.org/steel/application;1"].getService(Components.interfaces.steelIApplication);
    var console = Application.console;
 
-   /* It'd be useful if there were a way to actually render a font, but I can't find an interface to do it.
-    *
-    * So, we'll pretend like it's the 90s and we'll blit prerendered numbers down by hand.
-    */
-   const DIGIT_WIDTH = 5;
-   const DIGIT_HEIGHT = 8;
-   const digit_0 = new Uint8Array([23, 199, 255, 199, 23, 155, 255, 95, 255, 155, 223, 255, 0, 255, 223, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 223, 255, 0, 255, 223, 155, 255, 95, 255, 155, 23, 199, 255, 199, 23]);
-   const digit_1 = new Uint8Array([0, 0, 187, 255, 0, 47, 191, 255, 255, 0, 255, 211, 255, 255, 0, 183, 23, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255, 0]);
-   const digit_2 = new Uint8Array([71, 215, 255, 215, 59, 203, 255, 43, 255, 215, 0, 0, 11, 255, 255, 0, 0, 123, 255, 187, 0, 83, 251, 231, 31, 51, 251, 207, 27, 0, 187, 175, 11, 0, 0, 243, 255, 255, 255, 143]);
-   const digit_3 = new Uint8Array([63, 211, 255, 215, 63, 191, 243, 47, 255, 235, 0, 0, 39, 255, 207, 0, 0, 239, 231, 35, 0, 0, 43, 255, 199, 0, 0, 0, 255, 255, 199, 247, 63, 255, 187, 59, 215, 255, 195, 35]);
-   const digit_4 = new Uint8Array([0, 0, 99, 255, 255, 0, 15, 211, 255, 255, 0, 139, 111, 255, 255, 39, 223, 7, 255, 255, 183, 95, 0, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255]);
-   const digit_5 = new Uint8Array([27, 255, 255, 255, 255, 79, 255, 175, 0, 0, 139, 255, 111, 0, 0, 191, 255, 243, 235, 75, 207, 103, 47, 255, 219, 0, 0, 0, 255, 255, 195, 251, 67, 255, 191, 59, 215, 255, 199, 39]);
-   const digit_6 = new Uint8Array([11, 167, 247, 227, 75, 135, 255, 51, 243, 203, 215, 231, 0, 0, 0, 255, 239, 219, 235, 59, 255, 255, 63, 255, 215, 227, 255, 0, 255, 255, 151, 255, 67, 255, 207, 15, 179, 255, 215, 47]);
-   const digit_7 = new Uint8Array([255, 255, 255, 255, 255, 0, 0, 111, 255, 179, 0, 0, 227, 255, 47, 0, 59, 255, 199, 0, 0, 135, 255, 123, 0, 0, 187, 255, 67, 0, 0, 227, 255, 23, 0, 0, 255, 255, 0, 0]);
-   const digit_8 = new Uint8Array([79, 223, 255, 223, 79, 239, 255, 43, 255, 235, 203, 255, 43, 255, 199, 23, 227, 255, 235, 23, 171, 255, 71, 255, 179, 255, 255, 0, 255, 255, 211, 255, 75, 255, 211, 39, 203, 255, 203, 39]);
-   const digit_9 = new Uint8Array([43, 215, 255, 179, 15, 203, 255, 67, 255, 151, 255, 255, 0, 255, 223, 215, 225, 63, 255, 255, 63, 235, 219, 239, 255, 0, 0, 0, 231, 219, 203, 243, 51, 255, 135, 83, 235, 247, 167, 11]);
-
-   const DIGIT_PLUS_WIDTH = 3;
-   const digit_plus = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 255, 255, 255, 0, 255, 0, 0, 0, 0, 0, 0, 0]);
-       
-   const digit = [digit_0, digit_1, digit_2, digit_3, digit_4, digit_5, digit_6, digit_7, digit_8, digit_9];
-
-   /* Draw the digit image to the pixel data array. */
-   var addDigitToImageArray = function(imgData, imgDataStride, digit, digitStride, x, y)
+   var BadgeImage = function(w, h)
    {
-      for (let i = 0; i < (digit.length/digitStride); i++)
-      {
-         for (let j = 0; j < digitStride; j++)
-         {
-            let offset = ((y+i)*imgDataStride) + ((x+j)*4);
-            let value = digit[(i*digitStride) + j];
+      this.data = new Uint8ClampedArray(w*h*4);
+      this.width = w;
+      this.height = h;
+      this.stride = w*4;
+   };
 
-            imgData[offset  ] = 255;
-            imgData[offset+1] = value;
-            imgData[offset+2] = value;
-            imgData[offset+3] = 255;
+   BadgeImage.prototype.drawRect = function(x, y, w, h, r, g, b, a)
+   {
+      for (let i = 0; i < h; i++)
+      {
+         for (let j = 0; j < w; j++)
+         {
+            let offset = ((y+i)*this.stride) + ((x+j)*4);
+            this.data[offset  ] = r;
+            this.data[offset+1] = g;
+            this.data[offset+2] = b;
+            this.data[offset+3] = a;
          }
       }
    }
 
-   /* Make a badge icon for an unread message count of 'msgCount'.
-    *
-    * Returns an imgIContainer.
-    */
-   var createBadgeIcon = function(msgCount)
+   BadgeImage.prototype.getAsImgContainer = function()
    {
-      /* Taskbar overlay icons are always 16x16:
-       * http://msdn.microsoft.com/en-us/library/dd391696(v=vs.85).aspx
-       *
-       * If we were to give a differently-sized image, it would be scaled for us.
-       */
-      const imageWidth = 16;
-      const imageHeight = 16;
-
-      if (msgCount < 0) msgCount == 0;
-      
-      /* Fill it with a red background.
-       * We put down a 15x15 block, making the top row and the left column invisible (0 alpha).
-       * This way we can better center our 5x8 numbers on it horizontally.
-       */
-      let imgData = new Uint8Array(imageWidth*imageHeight*4);
-      for (let i = 0; i < imageWidth*imageHeight*4; i += 4)
-      {
-         imgData[i  ] = 255;
-         imgData[i+1] = 0;
-         imgData[i+2] = 0;
-         if ((i <= (imageWidth*4)) || (i % (imageWidth * 4) == 0))
-         {
-            imgData[i+3] = 0;
-         }
-         else
-         {
-            imgData[i+3] = 255;
-         }
-      }
-      
-      /* Draw the digits. */
-      if (msgCount <= 9)
-      {
-         /* one digit */
-         addDigitToImageArray(imgData, (imageWidth*4), digit[msgCount], DIGIT_WIDTH, 6, 4);
-      }
-      else if (msgCount <= 99)
-      {
-         /* two digits */
-         addDigitToImageArray(imgData, (imageWidth*4), digit[Math.floor(msgCount / 10)], DIGIT_WIDTH, 3, 4);
-         addDigitToImageArray(imgData, (imageWidth*4), digit[msgCount % 10], DIGIT_WIDTH, 9, 4);
-      }
-      else
-      {
-         /* 99+ */
-         addDigitToImageArray(imgData, (imageWidth*4), digit[9], DIGIT_WIDTH, 2, 4);
-         addDigitToImageArray(imgData, (imageWidth*4), digit[9], DIGIT_WIDTH, 8, 4);
-         addDigitToImageArray(imgData, (imageWidth*4), digit_plus, DIGIT_PLUS_WIDTH, 13, 4);
-      }
-
       /* Create an imgIEncoder so we can turn the image data into a PNG stream. */
       let imgEncoder = Cc["@mozilla.org/image/encoder;2?type=image/png"].getService(Components.interfaces.imgIEncoder);
       imgEncoder.initFromData(
-         imgData,
-         imgData.length,
-         imageWidth,
-         imageHeight,
-         (imageWidth*4),
+         this.data,
+         this.data.length,
+         this.width,
+         this.height,
+         this.stride,
          imgEncoder.INPUT_FORMAT_RGBA,
          "");
 
@@ -143,6 +72,105 @@ net.streiff.unreadbadge = function()
       /* Close the PNG stream. */
       imgEncoder.close();
       return iconImage;
+   }
+   
+   /* It'd be useful if there were a way to actually render a font, but I can't find an interface to do it.
+    *
+    * So, we'll pretend like it's the 90s and we'll blit prerendered numbers down by hand.
+    */
+   var DigitImage = function(w, h, data)
+   {
+      this.width = w;
+      this.height = h;
+      this.stride = this.width;
+      this.data = new Uint8Array(data);
+   }
+
+   const digit_0 = new DigitImage(5, 8, [23, 199, 255, 199, 23, 155, 255, 95, 255, 155, 223, 255, 0, 255, 223, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 223, 255, 0, 255, 223, 155, 255, 95, 255, 155, 23, 199, 255, 199, 23]);
+   const digit_1 = new DigitImage(5, 8, [0, 0, 187, 255, 0, 47, 191, 255, 255, 0, 255, 211, 255, 255, 0, 183, 23, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255, 0]);
+   const digit_2 = new DigitImage(5, 8, [71, 215, 255, 215, 59, 203, 255, 43, 255, 215, 0, 0, 11, 255, 255, 0, 0, 123, 255, 187, 0, 83, 251, 231, 31, 51, 251, 207, 27, 0, 187, 175, 11, 0, 0, 243, 255, 255, 255, 143]);
+   const digit_3 = new DigitImage(5, 8, [63, 211, 255, 215, 63, 191, 243, 47, 255, 235, 0, 0, 39, 255, 207, 0, 0, 239, 231, 35, 0, 0, 43, 255, 199, 0, 0, 0, 255, 255, 199, 247, 63, 255, 187, 59, 215, 255, 195, 35]);
+   const digit_4 = new DigitImage(5, 8, [0, 0, 99, 255, 255, 0, 15, 211, 255, 255, 0, 139, 111, 255, 255, 39, 223, 7, 255, 255, 183, 95, 0, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255]);
+   const digit_5 = new DigitImage(5, 8, [27, 255, 255, 255, 255, 79, 255, 175, 0, 0, 139, 255, 111, 0, 0, 191, 255, 243, 235, 75, 207, 103, 47, 255, 219, 0, 0, 0, 255, 255, 195, 251, 67, 255, 191, 59, 215, 255, 199, 39]);
+   const digit_6 = new DigitImage(5, 8, [11, 167, 247, 227, 75, 135, 255, 51, 243, 203, 215, 231, 0, 0, 0, 255, 239, 219, 235, 59, 255, 255, 63, 255, 215, 227, 255, 0, 255, 255, 151, 255, 67, 255, 207, 15, 179, 255, 215, 47]);
+   const digit_7 = new DigitImage(5, 8, [255, 255, 255, 255, 255, 0, 0, 111, 255, 179, 0, 0, 227, 255, 47, 0, 59, 255, 199, 0, 0, 135, 255, 123, 0, 0, 187, 255, 67, 0, 0, 227, 255, 23, 0, 0, 255, 255, 0, 0]);
+   const digit_8 = new DigitImage(5, 8, [79, 223, 255, 223, 79, 239, 255, 43, 255, 235, 203, 255, 43, 255, 199, 23, 227, 255, 235, 23, 171, 255, 71, 255, 179, 255, 255, 0, 255, 255, 211, 255, 75, 255, 211, 39, 203, 255, 203, 39]);
+   const digit_9 = new DigitImage(5, 8, [43, 215, 255, 179, 15, 203, 255, 67, 255, 151, 255, 255, 0, 255, 223, 215, 225, 63, 255, 255, 63, 235, 219, 239, 255, 0, 0, 0, 231, 219, 203, 243, 51, 255, 135, 83, 235, 247, 167, 11]);
+   const digit_plus = new DigitImage(3, 8, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 255, 255, 255, 0, 255, 0, 0, 0, 0, 0, 0, 0]);
+   const digit = [digit_0, digit_1, digit_2, digit_3, digit_4, digit_5, digit_6, digit_7, digit_8, digit_9];
+
+   /* Draw the digit image to the pixel data array. */
+   BadgeImage.prototype.drawDigit = function(digit, x, y)
+   {
+      for (let i = 0; i < digit.height; i++)
+      {
+         for (let j = 0; j < digit.width; j++)
+         {
+            let offset = ((y+i)*this.stride) + ((x+j)*4);
+            let value = digit.data[(i*digit.stride) + j];
+
+            this.data[offset  ] += value;
+            this.data[offset+1] += value;
+            this.data[offset+2] += value;
+            this.data[offset+3] += value;
+         }
+      }
+   }
+
+   var createBadgeBackground = function(badge)
+   {
+      /* Draw a 15x15 square. */
+      badge.drawRect(0, 0, 15, 15, 255, 0, 0, 255);
+      /* Draw a drop-shadow. */
+      badge.drawRect(1, 15, 15, 1, 0, 0, 0, 128);
+      badge.drawRect(15, 1, 1, 15, 0, 0, 0, 128);
+   }
+   
+   /* Make a badge icon for an unread message count of 'msgCount'.
+    *
+    * Returns an imgIContainer.
+    */
+   var createBadgeIcon = function(msgCount)
+   {
+      /* Taskbar overlay icons "should be a small icon, measuring 16x16 pixels at 96 dpi"
+       * http://msdn.microsoft.com/en-us/library/dd391696(v=vs.85).aspx
+       *
+       * If we were to give a differently-sized image, it would be scaled for us.
+       *
+       * Despite the MSDN documentation, it might not be always 16x16, I'd assume it is
+       * actually based on GetSystemMetrics(SM_CXSMICON/SM_CYSMICON). Right now we
+       * always assume 16x16 though.
+       */
+      const imageWidth = 16;
+      const imageHeight = 16;
+
+      if (msgCount < 0) msgCount == 0;
+
+      let badge = new BadgeImage(imageWidth, imageHeight);
+      
+      createBadgeBackground(badge);
+      
+      /* Draw the digits. */
+      if (msgCount <= 9)
+      {
+         /* one digit */
+         badge.drawDigit(digit[msgCount], 5, 3);
+      }
+      else if (msgCount <= 99)
+      {
+         /* two digits */
+         badge.drawDigit(digit[Math.floor(msgCount / 10)], 2, 3);
+         badge.drawDigit(digit[msgCount % 10], 8, 3);
+      }
+      else
+      {
+         /* 99+ */
+         badge.drawDigit(digit[9], 1, 3);
+         badge.drawDigit(digit[9], 7, 3);
+         badge.drawDigit(digit_plus, 12, 3);
+      }
+
+      return badge.getAsImgContainer();
    }
 
    /* Get the first window. */
