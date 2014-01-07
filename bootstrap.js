@@ -58,6 +58,7 @@ net.streiff.unreadbadge = function()
    const prefsPrefix = "extensions.unreadbadge.";
    const defaultPrefs = {
       "badgeColor": "#FF0000",
+      "textColor": "#FFFFFF",
       "ignoreJunk": true,
       "ignoreDrafts": true,
       "ignoreTrash": true,
@@ -116,7 +117,7 @@ net.streiff.unreadbadge = function()
    }
    Color.prototype.toString = function()
    {
-      return "#" + this.padHex(this.r) + this.padHex(this.g) + this.padHex(this.b);
+      return "#" + this.padHex(this.r) + this.padHex(this.g) + this.padHex(this.b) + this.padHex(this.a);
    }
    
    var BadgeImage = function(w, h)
@@ -127,17 +128,50 @@ net.streiff.unreadbadge = function()
       this.stride = w*4;
    };
 
+   /* Set the pixel at (x,y). Does no checking to ensure pixel is in-range. */
+   BadgeImage.prototype.setPixel = function(x, y, color)
+   {
+      let offset = (y*this.stride) + (x*4);
+      this.data[offset  ] = color.r;
+      this.data[offset+1] = color.g;
+      this.data[offset+2] = color.b;
+      this.data[offset+3] = color.a;
+   }
+
+   /* Get the pixel at (x,y). Does no checking to ensure pixel is in-range. */
+   BadgeImage.prototype.getPixel = function(x, y, color)
+   {
+      let offset = (y*this.stride) + (x*4);
+      return new Color(
+         this.data[offset  ],
+         this.data[offset+1],
+         this.data[offset+2],
+         this.data[offset+3]);
+   }
+   
+   /* Blend 'src' into the pixel at (x,y). Does no checking to ensure pixel is in-range. */
+   BadgeImage.prototype.blendPixel = function(x, y, src)
+   {
+      var dst = this.getPixel(x, y);
+      var dstAlpha = dst.a / 255;
+      var srcAlpha = src.a / 255;
+      var outAlpha = srcAlpha + dstAlpha * (1 - srcAlpha);
+      var out = new Color(
+         Math.round(((src.r * srcAlpha) + (dst.r * dstAlpha) * (1 - srcAlpha)) / outAlpha),
+         Math.round(((src.g * srcAlpha) + (dst.g * dstAlpha) * (1 - srcAlpha)) / outAlpha),
+         Math.round(((src.b * srcAlpha) + (dst.b * dstAlpha) * (1 - srcAlpha)) / outAlpha),
+         Math.round(outAlpha * 255));
+      this.setPixel(x, y, out);
+   }
+   
+   /* Draw a filled rectangle. */
    BadgeImage.prototype.drawRect = function(x, y, w, h, color)
    {
       for (let i = 0; i < h; i++)
       {
          for (let j = 0; j < w; j++)
          {
-            let offset = ((y+i)*this.stride) + ((x+j)*4);
-            this.data[offset  ] = color.r;
-            this.data[offset+1] = color.g;
-            this.data[offset+2] = color.b;
-            this.data[offset+3] = color.a;
+            this.blendPixel(x+j, y+i, color);
          }
       }
    }
@@ -191,17 +225,14 @@ net.streiff.unreadbadge = function()
    /* Draw the digit image to the pixel data array. */
    BadgeImage.prototype.drawDigit = function(digit, x, y)
    {
+      /* Use the user's text color. We'll vary the alpha to blend it onto the background. */
+      let color = new Color(Services.prefs.getCharPref(prefsPrefix + "textColor"));
       for (let i = 0; i < digit.height; i++)
       {
          for (let j = 0; j < digit.width; j++)
          {
-            let offset = ((y+i)*this.stride) + ((x+j)*4);
-            let value = digit.data[(i*digit.stride) + j];
-
-            this.data[offset  ] += value;
-            this.data[offset+1] += value;
-            this.data[offset+2] += value;
-            this.data[offset+3] += value;
+            color.a = digit.data[(i*digit.stride) + j];
+            this.blendPixel(x+j, y+i, color);
          }
       }
    }
