@@ -91,7 +91,7 @@ net.streiff.unreadbadge = function()
       }
    }
 
-   var Color = function(str_or_r, g, b, a)
+   /*var Color = function(str_or_r, g, b, a)
    {
       if (typeof str_or_r == "string")
       {
@@ -118,74 +118,21 @@ net.streiff.unreadbadge = function()
    Color.prototype.toString = function()
    {
       return "#" + this.padHex(this.r) + this.padHex(this.g) + this.padHex(this.b) + this.padHex(this.a);
-   }
-   
-   var BadgeImage = function(w, h)
-   {
-      this.data = new Uint8ClampedArray(w*h*4);
-      this.width = w;
-      this.height = h;
-      this.stride = w*4;
-   };
+   }*/
 
-   /* Set the pixel at (x,y). Does no checking to ensure pixel is in-range. */
-   BadgeImage.prototype.setPixel = function(x, y, color)
+   var getCanvasAsImgContainer = function(canvas, width, height)
    {
-      let offset = (y*this.stride) + (x*4);
-      this.data[offset  ] = color.r;
-      this.data[offset+1] = color.g;
-      this.data[offset+2] = color.b;
-      this.data[offset+3] = color.a;
-   }
+      var imageData = canvas.getContext('2d').getImageData(
+         0, 0, width, height);
 
-   /* Get the pixel at (x,y). Does no checking to ensure pixel is in-range. */
-   BadgeImage.prototype.getPixel = function(x, y, color)
-   {
-      let offset = (y*this.stride) + (x*4);
-      return new Color(
-         this.data[offset  ],
-         this.data[offset+1],
-         this.data[offset+2],
-         this.data[offset+3]);
-   }
-   
-   /* Blend 'src' into the pixel at (x,y). Does no checking to ensure pixel is in-range. */
-   BadgeImage.prototype.blendPixel = function(x, y, src)
-   {
-      var dst = this.getPixel(x, y);
-      var dstAlpha = dst.a / 255;
-      var srcAlpha = src.a / 255;
-      var outAlpha = srcAlpha + dstAlpha * (1 - srcAlpha);
-      var out = new Color(
-         Math.round(((src.r * srcAlpha) + (dst.r * dstAlpha) * (1 - srcAlpha)) / outAlpha),
-         Math.round(((src.g * srcAlpha) + (dst.g * dstAlpha) * (1 - srcAlpha)) / outAlpha),
-         Math.round(((src.b * srcAlpha) + (dst.b * dstAlpha) * (1 - srcAlpha)) / outAlpha),
-         Math.round(outAlpha * 255));
-      this.setPixel(x, y, out);
-   }
-   
-   /* Draw a filled rectangle. */
-   BadgeImage.prototype.drawRect = function(x, y, w, h, color)
-   {
-      for (let i = 0; i < h; i++)
-      {
-         for (let j = 0; j < w; j++)
-         {
-            this.blendPixel(x+j, y+i, color);
-         }
-      }
-   }
-
-   BadgeImage.prototype.getAsImgContainer = function()
-   {
       /* Create an imgIEncoder so we can turn the image data into a PNG stream. */
       let imgEncoder = Cc["@mozilla.org/image/encoder;2?type=image/png"].getService(Components.interfaces.imgIEncoder);
       imgEncoder.initFromData(
-         this.data,
-         this.data.length,
-         this.width,
-         this.height,
-         this.stride,
+         imageData.data,
+         imageData.data.length,
+         imageData.width,
+         imageData.height,
+         imageData.width * 4,
          imgEncoder.INPUT_FORMAT_RGBA,
          "");
 
@@ -196,57 +143,104 @@ net.streiff.unreadbadge = function()
       imgEncoder.close();
       return iconImage;
    }
-   
-   /* It'd be useful if there were a way to actually render a font, but I can't find an interface to do it.
+
+   var createCircularBadgeStyle = function(imageWidth, imageHeight, canvas, text)
+   {
+      var cxt = canvas.getContext("2d");
+
+      // Draw the background.
+      cxt.save();
+         var gradient = cxt.createRadialGradient(
+            imageWidth/2, imageHeight/2.5, 0,
+            imageWidth/2, imageHeight/2, imageWidth/2);
+         gradient.addColorStop(0, Services.prefs.getCharPref(prefsPrefix + "badgeColor"));
+         gradient.addColorStop(1, "rgba(190,16,16,1.0)"); // TODO: need to compute this based on badgeColor...
+         cxt.fillStyle = gradient;
+      
+         cxt.beginPath();
+            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
+            cxt.fill();
+            cxt.clip();
+         cxt.closePath();
+
+         cxt.fillStyle = "rgba(255,255,255,0.2)";
+         cxt.scale(1, 0.5);
+         cxt.beginPath();
+            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
+            cxt.fill();
+         cxt.closePath();
+      cxt.restore();
+
+      // Draw the frame.
+      cxt.save();
+         cxt.shadowOffsetX = 0;
+         cxt.shadowOffsetY = 0;
+         cxt.shadowColor = "rgba(0,0,0,0.7)";
+         cxt.shadowBlur = imageWidth/10;
+         cxt.strokeStyle = Services.prefs.getCharPref(prefsPrefix + "textColor");
+         cxt.lineWidth = imageWidth/10;
+         cxt.beginPath();
+            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
+            cxt.stroke();
+         cxt.closePath();
+      cxt.restore();
+
+      cxt.shadowOffsetX = 0;
+      cxt.shadowOffsetY = 0;
+      cxt.shadowColor = "rgba(0,0,0,0.7)";
+      cxt.shadowBlur = imageWidth/10;
+      cxt.font = (imageHeight*0.7) + "px Calibri bold";
+      cxt.textAlign = "center";
+      cxt.textBaseline = "middle";
+      cxt.fillStyle = "white";
+      cxt.fillText(text, imageWidth / 2, imageHeight / 2);
+   }
+
+   /* Returns the size of the icon overlay.
     *
-    * So, we'll pretend like it's the 90s and we'll blit prerendered numbers down by hand.
+    * The Mozilla framework will scale any icon we supply to the right size (handled
+    * in nsWindowGfx::CreateIcon), but the scaling looks pretty crappy. If we know
+    * what size we need, we can generate something that looks a lot nicer.
+    *
+    * If this were native code, GetSystemMetrics(SM_CXSMICON) would be exactly what
+    * we would do. Even within the Mozilla framework, nsWindowGfx::GetIconMetrics(
+    * nsWindowGfx::kSmallIcon) would also work, but it's not exposed via XPCOM.
+    *
+    * So instead we have to do it the hard way, and try to figure out what Windows
+    * is going to do based on registry entries. Yuck.
+    *
+    * Relevant entries are:
+    * - HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, "Shell Small Icon Size"
+    *   (might not exist, if not then move on to:) 
+    * - HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, "Shell Icon Size"
+    *   (if exists and the small one doesn't, then take it and divide by two)
+    * - HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, "AppliedDPI".
+    *   Default is 96. Scales up based on magnification setting. (125% is 120, 150% is 144, etc).
+    *
+    * The resulting icon size is (AppliedDPI / 96) * SmallIconSize.
     */
-   var DigitImage = function(w, h, data)
+   var getOverlayIconSize = function()
    {
-      this.width = w;
-      this.height = h;
-      this.stride = this.width;
-      this.data = new Uint8Array(data);
-   }
+      var smallIconSize = 16;
+      var appliedDpi = 96;
 
-   const digit_0 = new DigitImage(5, 8, [23, 199, 255, 199, 23, 155, 255, 95, 255, 155, 223, 255, 0, 255, 223, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 223, 255, 0, 255, 223, 155, 255, 95, 255, 155, 23, 199, 255, 199, 23]);
-   const digit_1 = new DigitImage(5, 8, [0, 0, 187, 255, 0, 47, 191, 255, 255, 0, 255, 211, 255, 255, 0, 183, 23, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255, 0]);
-   const digit_2 = new DigitImage(5, 8, [71, 215, 255, 215, 59, 203, 255, 43, 255, 215, 0, 0, 11, 255, 255, 0, 0, 123, 255, 187, 0, 83, 251, 231, 31, 51, 251, 207, 27, 0, 187, 175, 11, 0, 0, 243, 255, 255, 255, 143]);
-   const digit_3 = new DigitImage(5, 8, [63, 211, 255, 215, 63, 191, 243, 47, 255, 235, 0, 0, 39, 255, 207, 0, 0, 239, 231, 35, 0, 0, 43, 255, 199, 0, 0, 0, 255, 255, 199, 247, 63, 255, 187, 59, 215, 255, 195, 35]);
-   const digit_4 = new DigitImage(5, 8, [0, 0, 99, 255, 255, 0, 15, 211, 255, 255, 0, 139, 111, 255, 255, 39, 223, 7, 255, 255, 183, 95, 0, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 255]);
-   const digit_5 = new DigitImage(5, 8, [27, 255, 255, 255, 255, 79, 255, 175, 0, 0, 139, 255, 111, 0, 0, 191, 255, 243, 235, 75, 207, 103, 47, 255, 219, 0, 0, 0, 255, 255, 195, 251, 67, 255, 191, 59, 215, 255, 199, 39]);
-   const digit_6 = new DigitImage(5, 8, [11, 167, 247, 227, 75, 135, 255, 51, 243, 203, 215, 231, 0, 0, 0, 255, 239, 219, 235, 59, 255, 255, 63, 255, 215, 227, 255, 0, 255, 255, 151, 255, 67, 255, 207, 15, 179, 255, 215, 47]);
-   const digit_7 = new DigitImage(5, 8, [255, 255, 255, 255, 255, 0, 0, 111, 255, 179, 0, 0, 227, 255, 47, 0, 59, 255, 199, 0, 0, 135, 255, 123, 0, 0, 187, 255, 67, 0, 0, 227, 255, 23, 0, 0, 255, 255, 0, 0]);
-   const digit_8 = new DigitImage(5, 8, [79, 223, 255, 223, 79, 239, 255, 43, 255, 235, 203, 255, 43, 255, 199, 23, 227, 255, 235, 23, 171, 255, 71, 255, 179, 255, 255, 0, 255, 255, 211, 255, 75, 255, 211, 39, 203, 255, 203, 39]);
-   const digit_9 = new DigitImage(5, 8, [43, 215, 255, 179, 15, 203, 255, 67, 255, 151, 255, 255, 0, 255, 223, 215, 225, 63, 255, 255, 63, 235, 219, 239, 255, 0, 0, 0, 231, 219, 203, 243, 51, 255, 135, 83, 235, 247, 167, 11]);
-   const digit_plus = new DigitImage(3, 8, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 255, 255, 255, 0, 255, 0, 0, 0, 0, 0, 0, 0]);
-   const digit = [digit_0, digit_1, digit_2, digit_3, digit_4, digit_5, digit_6, digit_7, digit_8, digit_9];
+      let nsIWindowsRegKey = Components.classes["@mozilla.org/windows-registry-key;1"].getService(Components.interfaces.nsIWindowsRegKey);
+      nsIWindowsRegKey.open(
+         nsIWindowsRegKey.ROOT_KEY_CURRENT_USER,
+         "Control Panel\\Desktop\\WindowMetrics",
+         nsIWindowsRegKey.ACCESS_READ);
 
-   /* Draw the digit image to the pixel data array. */
-   BadgeImage.prototype.drawDigit = function(digit, x, y)
-   {
-      /* Use the user's text color. We'll vary the alpha to blend it onto the background. */
-      let color = new Color(Services.prefs.getCharPref(prefsPrefix + "textColor"));
-      for (let i = 0; i < digit.height; i++)
-      {
-         for (let j = 0; j < digit.width; j++)
-         {
-            color.a = digit.data[(i*digit.stride) + j];
-            this.blendPixel(x+j, y+i, color);
-         }
-      }
-   }
+      if (nsIWindowsRegKey.hasValue("Shell Small Icon Size") && nsIWindowsRegKey.getValueType("Shell Small Icon Size") == nsIWindowsRegKey.TYPE_INT)
+         smallIconSize = nsIWindowsRegKey.readIntValue("Shell Small Icon Size");
+      else if (nsIWindowsRegKey.hasValue("Shell Icon Size") && nsIWindowsRegKey.getValueType("Shell Icon Size") == nsIWindowsRegKey.TYPE_INT)
+         smallIconSize = Math.floor(nsIWindowsRegKey.readIntValue("Shell Icon Size") / 2);
 
-   var createBadgeBackground = function(badge)
-   {
-      let badgeColor = new Color(Services.prefs.getCharPref(prefsPrefix + "badgeColor"));
-      let shadow = new Color(0, 0, 0, 128);
+      if (nsIWindowsRegKey.hasValue("AppliedDPI") && nsIWindowsRegKey.getValueType("AppliedDPI") == nsIWindowsRegKey.TYPE_INT)
+         appliedDpi = nsIWindowsRegKey.readIntValue("AppliedDPI");
 
-      /* Draw a 15x15 square. */
-      badge.drawRect(0, 0, 15, 15, badgeColor);
-      /* Draw a drop-shadow. */
-      badge.drawRect(1, 15, 15, 1, shadow);
-      badge.drawRect(15, 1, 1, 15, shadow);
+      nsIWindowsRegKey.close();
+
+      return (Math.floor(appliedDpi / 96) * smallIconSize);
    }
    
    /* Make a badge icon for an unread message count of 'msgCount'.
@@ -255,45 +249,22 @@ net.streiff.unreadbadge = function()
     */
    var createBadgeIcon = function(msgCount)
    {
-      /* Taskbar overlay icons "should be a small icon, measuring 16x16 pixels at 96 dpi"
-       * http://msdn.microsoft.com/en-us/library/dd391696(v=vs.85).aspx
-       *
-       * If we were to give a differently-sized image, it would be scaled for us.
-       *
-       * Despite the MSDN documentation, it might not be always 16x16, I'd assume it is
-       * actually based on GetSystemMetrics(SM_CXSMICON/SM_CYSMICON). Right now we
-       * always assume 16x16 though.
-       */
-      const imageWidth = 16;
-      const imageHeight = 16;
-
+      const iconSize = getOverlayIconSize();
+     
       if (msgCount < 0) msgCount == 0;
 
-      let badge = new BadgeImage(imageWidth, imageHeight);
-      
-      createBadgeBackground(badge);
-      
-      /* Draw the digits. */
-      if (msgCount <= 9)
-      {
-         /* one digit */
-         badge.drawDigit(digit[msgCount], 5, 3);
-      }
-      else if (msgCount <= 99)
-      {
-         /* two digits */
-         badge.drawDigit(digit[Math.floor(msgCount / 10)], 2, 3);
-         badge.drawDigit(digit[msgCount % 10], 8, 3);
-      }
+      var msgText = "";
+      if (msgCount <= 99)
+         msgText = msgCount.toString();
       else
-      {
-         /* 99+ */
-         badge.drawDigit(digit[9], 1, 3);
-         badge.drawDigit(digit[9], 7, 3);
-         badge.drawDigit(digit_plus, 12, 3);
-      }
+         msgText = "99+";
 
-      return badge.getAsImgContainer();
+      let badge = gActiveWindow.document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
+      badge.width = badge.height = iconSize;
+      badge.style.width = badge.style.height = iconSize + "px";
+      createCircularBadgeStyle(iconSize, iconSize, badge, msgText);
+
+      return getCanvasAsImgContainer(badge, iconSize, iconSize);
    }
 
    /* Get the first window. */
