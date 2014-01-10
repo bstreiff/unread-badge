@@ -150,19 +150,30 @@ net.streiff.unreadbadge = function()
 
       // Draw the background.
       cxt.save();
-         var gradient = cxt.createRadialGradient(
-            imageWidth/2, imageHeight/2.5, 0,
-            imageWidth/2, imageHeight/2, imageWidth/2);
-         gradient.addColorStop(0, Services.prefs.getCharPref(prefsPrefix + "badgeColor"));
-         gradient.addColorStop(1, "rgba(190,16,16,1.0)"); // TODO: need to compute this based on badgeColor...
-         cxt.fillStyle = gradient;
-      
+         // Solid color first.
+         cxt.fillStyle = Services.prefs.getCharPref(prefsPrefix + "badgeColor");
          cxt.beginPath();
             cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
             cxt.fill();
             cxt.clip();
          cxt.closePath();
 
+         // Create a gradient to blend on top of it.
+         var gradient = cxt.createRadialGradient(
+            imageWidth/2, imageHeight/2.5, 0,
+            imageWidth/2, imageHeight/2, imageWidth/2);
+         gradient.addColorStop(0, "rgba(255,255,255,0)");
+         gradient.addColorStop(1, "rgba(0,0,0,0.5)");
+         cxt.fillStyle = gradient;
+
+         // Blend it.
+         cxt.beginPath();
+            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
+            cxt.fill();
+            cxt.clip();
+         cxt.closePath();
+
+         // Add highlight.
          cxt.fillStyle = "rgba(255,255,255,0.2)";
          cxt.scale(1, 0.5);
          cxt.beginPath();
@@ -240,7 +251,7 @@ net.streiff.unreadbadge = function()
 
       nsIWindowsRegKey.close();
 
-      return (Math.floor(appliedDpi / 96) * smallIconSize);
+      return (Math.floor(appliedDpi / 96 * smallIconSize));
    }
    
    /* Make a badge icon for an unread message count of 'msgCount'.
