@@ -91,35 +91,6 @@ net.streiff.unreadbadge = function()
       }
    }
 
-   /*var Color = function(str_or_r, g, b, a)
-   {
-      if (typeof str_or_r == "string")
-      {
-         // str can be #rrggbb, or #rrggbbaa. If alpha is not given, defaults to 255.
-         let str = str_or_r.replace("#", "");
-         this.r = (str.length >= 2 ? parseInt(str.substr(0, 2), 16) : 0);
-         this.g = (str.length >= 4 ? parseInt(str.substr(2, 2), 16) : 0);
-         this.b = (str.length >= 6 ? parseInt(str.substr(4, 2), 16) : 0);
-         this.a = (str.length >= 8 ? parseInt(str.substr(6, 2), 16) : 255);
-      }
-      else
-      {
-         this.r = (str_or_r !== undefined) ? str_or_r : 0;
-         this.g = (g !== undefined) ? g : 0;
-         this.b = (b !== undefined) ? b : 0;
-         this.a = (a !== undefined) ? a : 255;
-      }
-   }
-   Color.prototype.padHex = function(n)
-   {
-      var hex = n.toString(16);
-      return (hex.length == 1 ? "0" + hex : hex);
-   }
-   Color.prototype.toString = function()
-   {
-      return "#" + this.padHex(this.r) + this.padHex(this.g) + this.padHex(this.b) + this.padHex(this.a);
-   }*/
-
    var getCanvasAsImgContainer = function(canvas, width, height)
    {
       var imageData = canvas.getContext('2d').getImageData(
@@ -144,6 +115,71 @@ net.streiff.unreadbadge = function()
       return iconImage;
    }
 
+   var createCircularBadgeStyle = function(imageWidth, imageHeight, canvas, text)
+   {
+      var cxt = canvas.getContext("2d");
+      var badgeColorStyle = Services.prefs.getCharPref(prefsPrefix + "badgeColor");
+      var textColorStyle = Services.prefs.getCharPref(prefsPrefix + "textColor");
+
+      // Draw the background.
+      cxt.save();
+         // Solid color first.
+         cxt.fillStyle = badgeColorStyle;
+         cxt.beginPath();
+            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
+            cxt.fill();
+            cxt.clip();
+         cxt.closePath();
+
+         // Create a gradient to blend on top of it.
+         var gradient = cxt.createRadialGradient(
+            imageWidth/2, imageHeight/2.5, 0,
+            imageWidth/2, imageHeight/2, imageWidth/2);
+         gradient.addColorStop(0, "rgba(255,255,255,0)");
+         gradient.addColorStop(1, "rgba(0,0,0,0.5)");
+         cxt.fillStyle = gradient;
+
+         // Blend it.
+         cxt.beginPath();
+            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
+            cxt.fill();
+            cxt.clip();
+         cxt.closePath();
+
+         // Add highlight.
+         cxt.fillStyle = "rgba(255,255,255,0.2)";
+         cxt.scale(1, 0.5);
+         cxt.beginPath();
+            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
+            cxt.fill();
+         cxt.closePath();
+      cxt.restore();
+
+      // Draw the frame.
+      cxt.save();
+         cxt.shadowOffsetX = 0;
+         cxt.shadowOffsetY = 0;
+         cxt.shadowColor = "rgba(0,0,0,0.7)";
+         cxt.shadowBlur = imageWidth/10;
+         cxt.strokeStyle = textColorStyle;
+         cxt.lineWidth = imageWidth/10;
+         cxt.beginPath();
+            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
+            cxt.stroke();
+         cxt.closePath();
+      cxt.restore();
+
+      cxt.shadowOffsetX = 0;
+      cxt.shadowOffsetY = 0;
+      cxt.shadowColor = "rgba(0,0,0,0.7)";
+      cxt.shadowBlur = imageWidth/10;
+      cxt.font = (imageHeight*0.7) + "px Calibri bold";
+      cxt.textAlign = "center";
+      cxt.textBaseline = "middle";
+      cxt.fillStyle = textColorStyle;
+      cxt.fillText(text, imageWidth / 2, imageHeight / 2);
+   }
+   
    var createCircularBadgeStyle = function(imageWidth, imageHeight, canvas, text)
    {
       var cxt = canvas.getContext("2d");
@@ -229,8 +265,12 @@ net.streiff.unreadbadge = function()
     *   Default is 96. Scales up based on magnification setting. (125% is 120, 150% is 144, etc).
     *
     * The resulting icon size is (AppliedDPI / 96) * SmallIconSize.
+    *
+    * We memoize this, because Windows requires a logoff/logon when changing these
+    * settings, which means there's no need for us to requery every time during the
+    * lifetime of a single Thunderbird process.
     */
-   var getOverlayIconSize = function()
+   var overlayIconSize = (function()
    {
       var smallIconSize = 16;
       var appliedDpi = 96;
@@ -252,7 +292,7 @@ net.streiff.unreadbadge = function()
       nsIWindowsRegKey.close();
 
       return (Math.floor(appliedDpi / 96 * smallIconSize));
-   }
+   })();
    
    /* Make a badge icon for an unread message count of 'msgCount'.
     *
@@ -260,7 +300,7 @@ net.streiff.unreadbadge = function()
     */
    var createBadgeIcon = function(msgCount)
    {
-      const iconSize = getOverlayIconSize();
+      const iconSize = overlayIconSize;
      
       if (msgCount < 0) msgCount == 0;
 
