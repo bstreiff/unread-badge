@@ -472,7 +472,7 @@ net.streiff.unreadbadge = function()
        }
    };
 
-   var gPrefsObserver = {
+   var prefsObserver = {
       observe: function(aSubject, aTopic, aData)
       {
          queueOverlayIconUpdate();
@@ -492,14 +492,14 @@ net.streiff.unreadbadge = function()
             return;
          Services.ww.registerNotification(gWindowObserver);
          xpc.mailSession.AddFolderListener(folderListener, Ci.nsIFolderListener.added|Ci.nsIFolderListener.removed|Ci.nsIFolderListener.propertyFlagChanged|Ci.nsIFolderListener.event);
-         Services.prefs.addObserver(prefsPrefix, gPrefsObserver, false);
+         Services.prefs.addObserver(prefsPrefix, prefsObserver, false);
          findActiveWindow();
       },
       shutdown: function(aData, aReason)
       {
          xpc.mailSession.RemoveFolderListener(folderListener);
          Services.ww.unregisterNotification(gWindowObserver);
-         Services.prefs.removeObserver(prefsPrefix, gPrefsObserver);
+         Services.prefs.removeObserver(prefsPrefix, prefsObserver);
          clearOverlayIcon();
       },
       uninstall: function()
