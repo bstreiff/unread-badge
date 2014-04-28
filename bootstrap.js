@@ -67,6 +67,7 @@ net.streiff.unreadbadge = function()
 
    Components.utils.import("resource://gre/modules/Services.jsm");
    Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+   Components.utils.import("resource://gre/modules/Timer.jsm");
 
    var xpc = {};
    
@@ -74,6 +75,7 @@ net.streiff.unreadbadge = function()
    XPCOMUtils.defineLazyServiceGetter(xpc, "taskbar", "@mozilla.org/windows-taskbar;1", "nsIWinTaskbar");
    XPCOMUtils.defineLazyServiceGetter(xpc, "acctMgr", "@mozilla.org/messenger/account-manager;1", "nsIMsgAccountManager");
    XPCOMUtils.defineLazyServiceGetter(xpc, "mailSession", "@mozilla.org/messenger/services/session;1", "nsIMsgMailSession");
+   XPCOMUtils.defineLazyServiceGetter(xpc, "notificationService", "@mozilla.org/messenger/msgnotificationservice;1", "nsIMsgFolderNotificationService");
    var Application = Components.classes["@mozilla.org/steel/application;1"].getService(Components.interfaces.steelIApplication);
    var console = Application.console;
 
@@ -415,10 +417,12 @@ net.streiff.unreadbadge = function()
       return xpc.taskbar.getOverlayIconController(docshell);
    }
 
+   var updateTimerId = null;
+
    var updateOverlayIcon = function()
    {
-     if (gActiveWindow)
-     {
+      if (gActiveWindow)
+      {
          let controller = getActiveWindowOverlayIconController();
 
          var messageCount = getUnreadCountForAllAccounts();
@@ -431,36 +435,36 @@ net.streiff.unreadbadge = function()
          {
             controller.setOverlayIcon(null, "");
          }
-     }
+
+         gActiveWindow.clearTimeout(updateTimerId);
+         updateTimerId = null;
+      }
    }
 
    var clearOverlayIcon = function()
    {
-     if (gActiveWindow)
-     {
+      if (gActiveWindow)
+      {
          let controller = getActiveWindowOverlayIconController();
          controller.setOverlayIcon(null, "");
-     }
+      }
    }
 
    /* From the folder listener, if we try to update, we'll get the old update counts. */
    var queueOverlayIconUpdate = function()
    {
       if (gActiveWindow)
-         gActiveWindow.setTimeout(updateOverlayIcon, 100);
+      {
+         if (updateTimerId == null)
+         {
+            updateTimerId = gActiveWindow.setTimeout(updateOverlayIcon, 100);
+         }
+      }
    }
 
    /* Implementation of nsIFolderListener */
    var folderListener =
    {
-       OnItemAdded: function(parent, item, viewString)
-       {
-          queueOverlayIconUpdate();
-       },
-       OnItemRemoved: function(parent, item, viewString)
-       {
-          queueOverlayIconUpdate();
-       },
        OnItemPropertyFlagChanged: function(item, property, oldFlag, newFlag)
        {
           if (property == "Status")
@@ -472,6 +476,43 @@ net.streiff.unreadbadge = function()
        }
    };
 
+   /* Implementation of nsIMsgFolderListener */
+   var msgFolderListener =
+   {
+      msgAdded: function(msg)
+      {
+         /* Only update if the new message is unread. */
+         if (msg.isRead == false)
+         {
+            queueOverlayIconUpdate();
+         }
+      },
+      msgsDeleted: function(msgs)
+      {
+         /* Check to see if there's an unread message among the things we're deleting.
+            If so, then we should update the badge. */
+         var deletingUnreadMessage = false;
+         var msgsEnumerator = msgs.enumerate();
+         while (msgsEnumerator.hasMoreElements())
+         {
+            var msg = msgsEnumerator.getNext().QueryInterface(Ci.nsIMsgDBHdr);
+            if (msg.isRead)
+            {
+               deletingUnreadMessage = true;
+               break;
+            }
+         }
+
+         if (deletingUnreadMessage)
+            queueOverlayIconUpdate();
+      },
+      folderDeleted: function(folder)
+      {
+         /* If we're deleting a folder, just go ahead and queue an update. */
+         queueOverlayIconUpdate();
+      },
+   };
+   
    var prefsObserver = {
       observe: function(aSubject, aTopic, aData)
       {
@@ -491,12 +532,14 @@ net.streiff.unreadbadge = function()
          if (!xpc.taskbar.available)
             return;
          Services.ww.registerNotification(gWindowObserver);
-         xpc.mailSession.AddFolderListener(folderListener, Ci.nsIFolderListener.added|Ci.nsIFolderListener.removed|Ci.nsIFolderListener.propertyFlagChanged|Ci.nsIFolderListener.event);
+         xpc.mailSession.AddFolderListener(folderListener, Ci.nsIFolderListener.propertyFlagChanged|Ci.nsIFolderListener.event);
+         xpc.notificationService.addListener(msgFolderListener, xpc.notificationService.msgAdded|xpc.notificationService.msgsDeleted|xpc.notificationService.folderDeleted|xpc.notificationService.itemEvent);
          Services.prefs.addObserver(prefsPrefix, prefsObserver, false);
          findActiveWindow();
       },
       shutdown: function(aData, aReason)
       {
+         xpc.notificationService.removeListener(msgFolderListener);
          xpc.mailSession.RemoveFolderListener(folderListener);
          Services.ww.unregisterNotification(gWindowObserver);
          Services.prefs.removeObserver(prefsPrefix, prefsObserver);
