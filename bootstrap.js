@@ -13,63 +13,65 @@
 if (!net) var net = {};
 if (!net.streiff) net.streiff = {};
 
-net.streiff.unreadbadge = function()
+net.streiff.unreadbadge = function ()
 {
    const Cc = Components.classes;
    const Ci = Components.interfaces;
 
    /* See http://mxr.mozilla.org/mozilla1.8.0/source/mailnews/base/public/nsMsgFolderFlags.h
-      for what all of these mean.
-   */
-   const nsMsgFolderFlags = {
-      Newsgroup:       0x00000001,
-      NewsHost:        0x00000002,
-      Mail:            0x00000004,
-      Directory:       0x00000008,
-      Elided:          0x00000010,
-      Virtual:         0x00000020,
-      Subscribed:      0x00000040,
-      Unused2:         0x00000080,
-      Trash:           0x00000100,
-      SentMail:        0x00000200,
-      Drafts:          0x00000400,
-      Queue:           0x00000800,
-      Inbox:           0x00001000,
-      ImapBox:         0x00002000,
-      Unused3:         0x00004000,
-      ProfileGroup:    0x00008000,
-      Unused4:         0x00010000,
-      GotNew:          0x00020000,
-      ImapServer:      0x00040000,
-      ImapPersonal:    0x00080000,
-      ImapPublic:      0x00100000,
-      ImapOtherUser:   0x00200000,
-      Templates:       0x00400000,
-      PersonalShared:  0x00800000,
-      ImapNoselect:    0x01000000,
-      CreatedOffline:  0x02000000,
-      ImapNoinferiors: 0x04000000,
-      Offline:         0x08000000,
-      OfflineEvents:   0x10000000,
-      CheckNew:        0x20000000,
-      Junk:            0x40000000
+   for what all of these mean.
+    */
+   const nsMsgFolderFlags =
+   {
+      Newsgroup : 0x00000001,
+      NewsHost : 0x00000002,
+      Mail : 0x00000004,
+      Directory : 0x00000008,
+      Elided : 0x00000010,
+      Virtual : 0x00000020,
+      Subscribed : 0x00000040,
+      Unused2 : 0x00000080,
+      Trash : 0x00000100,
+      SentMail : 0x00000200,
+      Drafts : 0x00000400,
+      Queue : 0x00000800,
+      Inbox : 0x00001000,
+      ImapBox : 0x00002000,
+      Unused3 : 0x00004000,
+      ProfileGroup : 0x00008000,
+      Unused4 : 0x00010000,
+      GotNew : 0x00020000,
+      ImapServer : 0x00040000,
+      ImapPersonal : 0x00080000,
+      ImapPublic : 0x00100000,
+      ImapOtherUser : 0x00200000,
+      Templates : 0x00400000,
+      PersonalShared : 0x00800000,
+      ImapNoselect : 0x01000000,
+      CreatedOffline : 0x02000000,
+      ImapNoinferiors : 0x04000000,
+      Offline : 0x08000000,
+      OfflineEvents : 0x10000000,
+      CheckNew : 0x20000000,
+      Junk : 0x40000000
    };
 
    const prefsPrefix = "extensions.unreadbadge.";
-   const defaultPrefs = {
-      "badgeColor": "#FF0000",
-      "textColor": "#FFFFFF",
-      "ignoreJunk": true,
-      "ignoreDrafts": true,
-      "ignoreTrash": true,
-      "ignoreSent": true
+   const defaultPrefs =
+   {
+      "badgeColor" : "#FF0000",
+      "textColor" : "#FFFFFF",
+      "ignoreJunk" : true,
+      "ignoreDrafts" : true,
+      "ignoreTrash" : true,
+      "ignoreSent" : true
    };
 
    Components.utils.import("resource://gre/modules/Services.jsm");
    Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
    var xpc = {};
-   
+
    XPCOMUtils.defineLazyServiceGetter(xpc, "imgTools", "@mozilla.org/image/tools;1", "imgITools");
    XPCOMUtils.defineLazyServiceGetter(xpc, "taskbar", "@mozilla.org/windows-taskbar;1", "nsIWinTaskbar");
    XPCOMUtils.defineLazyServiceGetter(xpc, "acctMgr", "@mozilla.org/messenger/account-manager;1", "nsIMsgAccountManager");
@@ -78,10 +80,10 @@ net.streiff.unreadbadge = function()
    var Application = Components.classes["@mozilla.org/steel/application;1"].getService(Components.interfaces.steelIApplication);
    var console = Application.console;
 
-   var setDefaultPreferences = function()
+   var setDefaultPreferences = function ()
    {
       let branch = Services.prefs.getDefaultBranch(prefsPrefix);
-      for (let [key, value] in Iterator(defaultPrefs))
+      for (let[key, value] in Iterator(defaultPrefs))
       {
          if (typeof value == "boolean")
             branch.setBoolPref(key, value);
@@ -92,10 +94,10 @@ net.streiff.unreadbadge = function()
       }
    }
 
-   var getCanvasAsImgContainer = function(canvas, width, height)
+   var getCanvasAsImgContainer = function (canvas, width, height)
    {
       var imageData = canvas.getContext('2d').getImageData(
-         0, 0, width, height);
+            0, 0, width, height);
 
       /* Create an imgIEncoder so we can turn the image data into a PNG stream. */
       let imgEncoder = Cc["@mozilla.org/image/encoder;2?type=image/png"].getService(Components.interfaces.imgIEncoder);
@@ -116,7 +118,7 @@ net.streiff.unreadbadge = function()
       return iconImage;
    }
 
-   var createCircularBadgeStyle = function(imageWidth, imageHeight, canvas, text)
+   var createCircularBadgeStyle = function (imageWidth, imageHeight, canvas, text)
    {
       var cxt = canvas.getContext("2d");
       var badgeColorStyle = Services.prefs.getCharPref(prefsPrefix + "badgeColor");
@@ -124,120 +126,120 @@ net.streiff.unreadbadge = function()
 
       // Draw the background.
       cxt.save();
-         // Solid color first.
-         cxt.fillStyle = badgeColorStyle;
-         cxt.beginPath();
-            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
-            cxt.fill();
-            cxt.clip();
-         cxt.closePath();
+      // Solid color first.
+      cxt.fillStyle = badgeColorStyle;
+      cxt.beginPath();
+      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.fill();
+      cxt.clip();
+      cxt.closePath();
 
-         // Create a gradient to blend on top of it.
-         var gradient = cxt.createRadialGradient(
-            imageWidth/2, imageHeight/2.5, 0,
-            imageWidth/2, imageHeight/2, imageWidth/2);
-         gradient.addColorStop(0, "rgba(255,255,255,0)");
-         gradient.addColorStop(1, "rgba(0,0,0,0.5)");
-         cxt.fillStyle = gradient;
+      // Create a gradient to blend on top of it.
+      var gradient = cxt.createRadialGradient(
+            imageWidth / 2, imageHeight / 2.5, 0,
+            imageWidth / 2, imageHeight / 2, imageWidth / 2);
+      gradient.addColorStop(0, "rgba(255,255,255,0)");
+      gradient.addColorStop(1, "rgba(0,0,0,0.5)");
+      cxt.fillStyle = gradient;
 
-         // Blend it.
-         cxt.beginPath();
-            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
-            cxt.fill();
-            cxt.clip();
-         cxt.closePath();
+      // Blend it.
+      cxt.beginPath();
+      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.fill();
+      cxt.clip();
+      cxt.closePath();
 
-         // Add highlight.
-         cxt.fillStyle = "rgba(255,255,255,0.2)";
-         cxt.scale(1, 0.5);
-         cxt.beginPath();
-            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
-            cxt.fill();
-         cxt.closePath();
+      // Add highlight.
+      cxt.fillStyle = "rgba(255,255,255,0.2)";
+      cxt.scale(1, 0.5);
+      cxt.beginPath();
+      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.fill();
+      cxt.closePath();
       cxt.restore();
 
       // Draw the frame.
       cxt.save();
-         cxt.shadowOffsetX = 0;
-         cxt.shadowOffsetY = 0;
-         cxt.shadowColor = "rgba(0,0,0,0.7)";
-         cxt.shadowBlur = imageWidth/10;
-         cxt.strokeStyle = textColorStyle;
-         cxt.lineWidth = imageWidth/10;
-         cxt.beginPath();
-            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
-            cxt.stroke();
-         cxt.closePath();
+      cxt.shadowOffsetX = 0;
+      cxt.shadowOffsetY = 0;
+      cxt.shadowColor = "rgba(0,0,0,0.7)";
+      cxt.shadowBlur = imageWidth / 10;
+      cxt.strokeStyle = textColorStyle;
+      cxt.lineWidth = imageWidth / 10;
+      cxt.beginPath();
+      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.stroke();
+      cxt.closePath();
       cxt.restore();
 
       cxt.shadowOffsetX = 0;
       cxt.shadowOffsetY = 0;
       cxt.shadowColor = "rgba(0,0,0,0.7)";
-      cxt.shadowBlur = imageWidth/10;
-      cxt.font = (imageHeight*0.7) + "px Calibri bold";
+      cxt.shadowBlur = imageWidth / 10;
+      cxt.font = (imageHeight * 0.7) + "px Calibri bold";
       cxt.textAlign = "center";
       cxt.textBaseline = "middle";
       cxt.fillStyle = textColorStyle;
       cxt.fillText(text, imageWidth / 2, imageHeight / 2);
    }
-   
-   var createCircularBadgeStyle = function(imageWidth, imageHeight, canvas, text)
+
+   var createCircularBadgeStyle = function (imageWidth, imageHeight, canvas, text)
    {
       var cxt = canvas.getContext("2d");
 
       // Draw the background.
       cxt.save();
-         // Solid color first.
-         cxt.fillStyle = Services.prefs.getCharPref(prefsPrefix + "badgeColor");
-         cxt.beginPath();
-            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
-            cxt.fill();
-            cxt.clip();
-         cxt.closePath();
+      // Solid color first.
+      cxt.fillStyle = Services.prefs.getCharPref(prefsPrefix + "badgeColor");
+      cxt.beginPath();
+      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.fill();
+      cxt.clip();
+      cxt.closePath();
 
-         // Create a gradient to blend on top of it.
-         var gradient = cxt.createRadialGradient(
-            imageWidth/2, imageHeight/2.5, 0,
-            imageWidth/2, imageHeight/2, imageWidth/2);
-         gradient.addColorStop(0, "rgba(255,255,255,0)");
-         gradient.addColorStop(1, "rgba(0,0,0,0.5)");
-         cxt.fillStyle = gradient;
+      // Create a gradient to blend on top of it.
+      var gradient = cxt.createRadialGradient(
+            imageWidth / 2, imageHeight / 2.5, 0,
+            imageWidth / 2, imageHeight / 2, imageWidth / 2);
+      gradient.addColorStop(0, "rgba(255,255,255,0)");
+      gradient.addColorStop(1, "rgba(0,0,0,0.5)");
+      cxt.fillStyle = gradient;
 
-         // Blend it.
-         cxt.beginPath();
-            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
-            cxt.fill();
-            cxt.clip();
-         cxt.closePath();
+      // Blend it.
+      cxt.beginPath();
+      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.fill();
+      cxt.clip();
+      cxt.closePath();
 
-         // Add highlight.
-         cxt.fillStyle = "rgba(255,255,255,0.2)";
-         cxt.scale(1, 0.5);
-         cxt.beginPath();
-            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
-            cxt.fill();
-         cxt.closePath();
+      // Add highlight.
+      cxt.fillStyle = "rgba(255,255,255,0.2)";
+      cxt.scale(1, 0.5);
+      cxt.beginPath();
+      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.fill();
+      cxt.closePath();
       cxt.restore();
 
       // Draw the frame.
       cxt.save();
-         cxt.shadowOffsetX = 0;
-         cxt.shadowOffsetY = 0;
-         cxt.shadowColor = "rgba(0,0,0,0.7)";
-         cxt.shadowBlur = imageWidth/10;
-         cxt.strokeStyle = Services.prefs.getCharPref(prefsPrefix + "textColor");
-         cxt.lineWidth = imageWidth/10;
-         cxt.beginPath();
-            cxt.arc(imageWidth/2, imageHeight/2, imageWidth/2.15, 0, Math.PI*2, true);
-            cxt.stroke();
-         cxt.closePath();
+      cxt.shadowOffsetX = 0;
+      cxt.shadowOffsetY = 0;
+      cxt.shadowColor = "rgba(0,0,0,0.7)";
+      cxt.shadowBlur = imageWidth / 10;
+      cxt.strokeStyle = Services.prefs.getCharPref(prefsPrefix + "textColor");
+      cxt.lineWidth = imageWidth / 10;
+      cxt.beginPath();
+      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.stroke();
+      cxt.closePath();
       cxt.restore();
 
       cxt.shadowOffsetX = 0;
       cxt.shadowOffsetY = 0;
       cxt.shadowColor = "rgba(0,0,0,0.7)";
-      cxt.shadowBlur = imageWidth/10;
-      cxt.font = (imageHeight*0.7) + "px Calibri bold";
+      cxt.shadowBlur = imageWidth / 10;
+      cxt.font = (imageHeight * 0.7) + "px Calibri bold";
       cxt.textAlign = "center";
       cxt.textBaseline = "middle";
       cxt.fillStyle = "white";
@@ -259,7 +261,7 @@ net.streiff.unreadbadge = function()
     *
     * Relevant entries are:
     * - HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, "Shell Small Icon Size"
-    *   (might not exist, if not then move on to:) 
+    *   (might not exist, if not then move on to:)
     * - HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, "Shell Icon Size"
     *   (if exists and the small one doesn't, then take it and divide by two)
     * - HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, "AppliedDPI".
@@ -271,7 +273,7 @@ net.streiff.unreadbadge = function()
     * settings, which means there's no need for us to requery every time during the
     * lifetime of a single Thunderbird process.
     */
-   var overlayIconSize = (function()
+   var overlayIconSize = (function ()
    {
       var smallIconSize = 16;
       var appliedDpi = 96;
@@ -293,17 +295,19 @@ net.streiff.unreadbadge = function()
       nsIWindowsRegKey.close();
 
       return (Math.floor(appliedDpi / 96 * smallIconSize));
-   })();
-   
+   }
+   )();
+
    /* Make a badge icon for an unread message count of 'msgCount'.
     *
     * Returns an imgIContainer.
     */
-   var createBadgeIcon = function(msgCount)
+   var createBadgeIcon = function (msgCount)
    {
       const iconSize = overlayIconSize;
-     
-      if (msgCount < 0) msgCount == 0;
+
+      if (msgCount < 0)
+         msgCount == 0;
 
       var msgText = "";
       if (msgCount <= 99)
@@ -320,7 +324,7 @@ net.streiff.unreadbadge = function()
    }
 
    /* Get the first window. */
-   var findActiveWindow = function()
+   var findActiveWindow = function ()
    {
       let windows = Services.wm.getEnumerator(null);
       let win = windows.hasMoreElements() ? windows.getNext().QueryInterface(Ci.nsIDOMWindow) : null;
@@ -328,23 +332,23 @@ net.streiff.unreadbadge = function()
    }
 
    var gActiveWindow = null;
-   var setActiveWindow = function(aWin)
+   var setActiveWindow = function (aWin)
    {
       // We're assuming that if gActiveWindow is non-null, we only get called when
       // it's closed.
       gActiveWindow = aWin;
       if (gActiveWindow)
-        updateOverlayIcon();
+         updateOverlayIcon();
    }
 
    var gWindowObserver =
    {
-      observe: function(aSubject, aTopic, aData)
+      observe : function (aSubject, aTopic, aData)
       {
          // Look for domwindowopened and domwindowclosed messages
          let win = aSubject.QueryInterface(Ci.nsIDOMWindow);
          if (aTopic == "domwindowopened")
-         {      
+         {
             if (!gActiveWindow)
                setActiveWindow(win);
          }
@@ -357,7 +361,7 @@ net.streiff.unreadbadge = function()
    };
 
    /* Enumerate all accounts and get the combined unread count. */
-   var getUnreadCountForAllAccounts = function()
+   var getUnreadCountForAllAccounts = function ()
    {
       let accounts = xpc.acctMgr.accounts;
       let totalCount = 0;
@@ -377,23 +381,23 @@ net.streiff.unreadbadge = function()
          ignoreMask |= nsMsgFolderFlags.Trash;
       if (Services.prefs.getBoolPref(prefsPrefix + "ignoreSent"))
          ignoreMask |= nsMsgFolderFlags.SentMail;
-
       while (accountEnumerator.hasMoreElements())
       {
          let account = accountEnumerator.getNext().QueryInterface(Ci.nsIMsgAccount);
-         let rootFolder = account.incomingServer.rootMsgFolder; /* nsIMsgFolder */
+         let rootFolder = account.incomingServer.rootMsgFolder;
+         /* nsIMsgFolder */
 
          /* You'd think that 'rootFolder.getNumUnread(true)' would do a deep search
-            and give us all the unread messages in this account, right? Wrong!
-            Apparently you have to get all subfolders that are inboxes and do
-            getNumUnread(true) on *those*. */
+         and give us all the unread messages in this account, right? Wrong!
+         Apparently you have to get all subfolders that are inboxes and do
+         getNumUnread(true) on *those*. */
          if (((rootFolder.flags & ignoreMask) == 0) && (account.incomingServer.type != "rss"))
             totalCount += getUnreadCountForFolder(rootFolder, ignoreMask);
       }
       return totalCount;
    }
 
-   var getUnreadCountForFolder = function(folder, ignoreMask)
+   var getUnreadCountForFolder = function (folder, ignoreMask)
    {
       var totalCount = 0;
       var subfoldersEnumerator = folder.subFolders;
@@ -412,19 +416,19 @@ net.streiff.unreadbadge = function()
       return totalCount;
    }
 
-   var getActiveWindowOverlayIconController = function()
+   var getActiveWindowOverlayIconController = function ()
    {
       let docshell = gActiveWindow.QueryInterface(Ci.nsIInterfaceRequestor)
-        .getInterface(Ci.nsIWebNavigation).QueryInterface(Ci.nsIDocShellTreeItem)
-        .treeOwner.QueryInterface(Ci.nsIInterfaceRequestor)
-        .getInterface(Ci.nsIXULWindow).docShell;
+         .getInterface(Ci.nsIWebNavigation).QueryInterface(Ci.nsIDocShellTreeItem)
+         .treeOwner.QueryInterface(Ci.nsIInterfaceRequestor)
+         .getInterface(Ci.nsIXULWindow).docShell;
 
       return xpc.taskbar.getOverlayIconController(docshell);
    }
 
    var updateTimerId = null;
 
-   var updateOverlayIcon = function()
+   var updateOverlayIcon = function ()
    {
       if (gActiveWindow)
       {
@@ -434,7 +438,7 @@ net.streiff.unreadbadge = function()
          if (messageCount > 0)
          {
             var icon = createBadgeIcon(messageCount)
-            controller.setOverlayIcon(icon, "Message Count");
+               controller.setOverlayIcon(icon, "Message Count");
          }
          else
          {
@@ -446,7 +450,7 @@ net.streiff.unreadbadge = function()
       }
    }
 
-   var clearOverlayIcon = function()
+   var clearOverlayIcon = function ()
    {
       if (gActiveWindow)
       {
@@ -456,7 +460,7 @@ net.streiff.unreadbadge = function()
    }
 
    /* From the folder listener, if we try to update, we'll get the old update counts. */
-   var queueOverlayIconUpdate = function()
+   var queueOverlayIconUpdate = function ()
    {
       if (gActiveWindow)
       {
@@ -470,21 +474,21 @@ net.streiff.unreadbadge = function()
    /* Implementation of nsIFolderListener */
    var folderListener =
    {
-       OnItemPropertyFlagChanged: function(item, property, oldFlag, newFlag)
-       {
-          if (property == "Status")
-              queueOverlayIconUpdate();
-       },
-       OnItemEvent: function(item, event)
-       {
-          queueOverlayIconUpdate();
-       }
+      OnItemPropertyFlagChanged : function (item, property, oldFlag, newFlag)
+      {
+         if (property == "Status")
+            queueOverlayIconUpdate();
+      },
+      OnItemEvent : function (item, event)
+      {
+         queueOverlayIconUpdate();
+      }
    };
 
    /* Implementation of nsIMsgFolderListener */
    var msgFolderListener =
    {
-      msgAdded: function(msg)
+      msgAdded : function (msg)
       {
          /* Only update if the new message is unread. */
          if (msg.isRead == false)
@@ -492,10 +496,10 @@ net.streiff.unreadbadge = function()
             queueOverlayIconUpdate();
          }
       },
-      msgsDeleted: function(msgs)
+      msgsDeleted : function (msgs)
       {
          /* Check to see if there's an unread message among the things we're deleting.
-            If so, then we should update the badge. */
+         If so, then we should update the badge. */
          var deletingUnreadMessage = false;
          var msgsEnumerator = msgs.enumerate();
          while (msgsEnumerator.hasMoreElements())
@@ -511,38 +515,40 @@ net.streiff.unreadbadge = function()
          if (deletingUnreadMessage)
             queueOverlayIconUpdate();
       },
-      folderDeleted: function(folder)
+      folderDeleted : function (folder)
       {
          /* If we're deleting a folder, just go ahead and queue an update. */
          queueOverlayIconUpdate();
       },
    };
-   
-   var prefsObserver = {
-      observe: function(aSubject, aTopic, aData)
+
+   var prefsObserver =
+   {
+      observe : function (aSubject, aTopic, aData)
       {
          queueOverlayIconUpdate();
       }
    };
-   
+
    /* The exported interface */
-   return {
-      install: function()
+   var exportedInterface =
+   {
+      install : function ()
       {
          /* nothing to do */
       },
-      startup: function(aData, aReason)
+      startup : function (aData, aReason)
       {
          setDefaultPreferences();
          if (!xpc.taskbar.available)
             return;
          Services.ww.registerNotification(gWindowObserver);
-         xpc.mailSession.AddFolderListener(folderListener, Ci.nsIFolderListener.propertyFlagChanged|Ci.nsIFolderListener.event);
-         xpc.notificationService.addListener(msgFolderListener, xpc.notificationService.msgAdded|xpc.notificationService.msgsDeleted|xpc.notificationService.folderDeleted|xpc.notificationService.itemEvent);
+         xpc.mailSession.AddFolderListener(folderListener, Ci.nsIFolderListener.propertyFlagChanged | Ci.nsIFolderListener.event);
+         xpc.notificationService.addListener(msgFolderListener, xpc.notificationService.msgAdded | xpc.notificationService.msgsDeleted | xpc.notificationService.folderDeleted | xpc.notificationService.itemEvent);
          Services.prefs.addObserver(prefsPrefix, prefsObserver, false);
          findActiveWindow();
       },
-      shutdown: function(aData, aReason)
+      shutdown : function (aData, aReason)
       {
          xpc.notificationService.removeListener(msgFolderListener);
          xpc.mailSession.RemoveFolderListener(folderListener);
@@ -550,12 +556,14 @@ net.streiff.unreadbadge = function()
          Services.prefs.removeObserver(prefsPrefix, prefsObserver);
          clearOverlayIcon();
       },
-      uninstall: function()
+      uninstall : function ()
       {
          /* nothing to do */
       }
    }
-}();
+   return exportedInterface;
+}
+();
 
 function install()
 {
