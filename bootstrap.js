@@ -365,6 +365,11 @@ net.streiff.unreadbadge = function()
       let accountEnumerator = accounts.enumerate();
       let ignoreMask = 0;
 
+      ignoreMask |= nsMsgFolderFlags.Newsgroup;
+      ignoreMask |= nsMsgFolderFlags.NewsHost;
+      ignoreMask |= nsMsgFolderFlags.Virtual;
+      ignoreMask |= nsMsgFolderFlags.Subscribed;
+
       if (Services.prefs.getBoolPref(prefsPrefix + "ignoreJunk"))
          ignoreMask |= nsMsgFolderFlags.Junk;
       if (Services.prefs.getBoolPref(prefsPrefix + "ignoreDrafts"))
@@ -383,11 +388,12 @@ net.streiff.unreadbadge = function()
             and give us all the unread messages in this account, right? Wrong!
             Apparently you have to get all subfolders that are inboxes and do
             getNumUnread(true) on *those*. */
-         totalCount += getUnreadCountForFolder(rootFolder, ignoreMask);
+         if (((rootFolder.flags & ignoreMask) == 0) && (account.incomingServer.type != "rss"))
+            totalCount += getUnreadCountForFolder(rootFolder, ignoreMask);
       }
       return totalCount;
    }
- 
+
    var getUnreadCountForFolder = function(folder, ignoreMask)
    {
       var totalCount = 0;
