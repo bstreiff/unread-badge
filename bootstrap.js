@@ -118,6 +118,11 @@ net.streiff.unreadbadge = function ()
       return iconImage;
    }
 
+   var forceImgIContainerDecode = function (imgIContainer)
+   {
+      xpc.imgTools.encodeImage(imgIContainer, "image/png");
+   }
+
    var createCircularBadgeStyle = function (imageWidth, imageHeight, canvas, text)
    {
       var cxt = canvas.getContext("2d");
@@ -437,8 +442,9 @@ net.streiff.unreadbadge = function ()
          var messageCount = getUnreadCountForAllAccounts();
          if (messageCount > 0)
          {
-            var icon = createBadgeIcon(messageCount)
-               controller.setOverlayIcon(icon, "Message Count");
+            var icon = createBadgeIcon(messageCount);
+            forceImgIContainerDecode(icon);
+            controller.setOverlayIcon(icon, "Message Count");
          }
          else
          {
