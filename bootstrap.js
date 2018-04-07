@@ -77,8 +77,6 @@ net.streiff.unreadbadge = function ()
    XPCOMUtils.defineLazyServiceGetter(xpc, "acctMgr", "@mozilla.org/messenger/account-manager;1", "nsIMsgAccountManager");
    XPCOMUtils.defineLazyServiceGetter(xpc, "mailSession", "@mozilla.org/messenger/services/session;1", "nsIMsgMailSession");
    XPCOMUtils.defineLazyServiceGetter(xpc, "notificationService", "@mozilla.org/messenger/msgnotificationservice;1", "nsIMsgFolderNotificationService");
-   var Application = Components.classes["@mozilla.org/steel/application;1"].getService(Components.interfaces.steelIApplication);
-   var console = Application.console;
 
    var setDefaultPreferences = function ()
    {
