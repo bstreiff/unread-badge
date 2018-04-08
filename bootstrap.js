@@ -80,15 +80,18 @@ net.streiff.unreadbadge = function ()
 
    var setDefaultPreferences = function ()
    {
-      let branch = Services.prefs.getDefaultBranch(prefsPrefix);
-      for (let[key, value] in Iterator(defaultPrefs))
-      {
-         if (typeof value == "boolean")
-            branch.setBoolPref(key, value);
-         else if (typeof value == "number")
-            branch.setIntPref(key, value);
-         else if (typeof value == "string")
-            branch.setCharPref(key, value);
+      let prefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefService);
+      let branch = prefs.getBranch(prefsPrefix);
+      for (let key in defaultPrefs) {
+         if (defaultPrefs.hasOwnProperty(key)) {
+            let value = defaultPrefs[key];
+            if (typeof value == "boolean")
+               branch.setBoolPref(key, value);
+            else if (typeof value == "number")
+               branch.setIntPref(key, value);
+            else if (typeof value == "string")
+               branch.setCharPref(key, value);
+         }
       }
    }
 
