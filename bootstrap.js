@@ -69,7 +69,8 @@ net.streiff.unreadbadge = function ()
 
    Components.utils.import("resource://gre/modules/Services.jsm");
    Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
-
+   Components.utils.import("resource://gre/modules/NetUtil.jsm");
+   
    var xpc = {};
 
    XPCOMUtils.defineLazyServiceGetter(xpc, "imgTools", "@mozilla.org/image/tools;1", "imgITools");
@@ -95,6 +96,21 @@ net.streiff.unreadbadge = function ()
       }
    }
 
+   var decodeImageToPng = function (imgEncoder)
+   {
+      if (xpc.imgTools.decodeImage)
+      {
+         /* Thunderbird < 60 */
+         return xpc.imgTools.decodeImage(imgEncoder, "image/png");
+      }
+      else
+      {
+         /* Thunderbird 60+ */
+         let imgBuffer = NetUtil.readInputStreamToString(imgEncoder, imgEncoder.available());
+         return xpc.imgTools.decodeImageFromBuffer(imgBuffer, imgBuffer.length, "image/png");
+      }
+   }
+   
    var getCanvasAsImgContainer = function (canvas, width, height)
    {
       var imageData = canvas.getContext('2d').getImageData(
@@ -112,7 +128,7 @@ net.streiff.unreadbadge = function ()
          "");
 
       /* Now turn the PNG stream into an imgIContainer. */
-      let iconImage = xpc.imgTools.decodeImage(imgEncoder, "image/png");
+      let iconImage = decodeImageToPng(imgEncoder);
 
       /* Close the PNG stream. */
       imgEncoder.close();
