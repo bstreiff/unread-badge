@@ -15,5 +15,6 @@
 		</em:targetApplication>
 		<em:targetPlatform>WINNT</em:targetPlatform>
 		<em:bootstrap>true</em:bootstrap>
+		<em:optionsURL>chrome://unread-badge/content/options.xul</em:optionsURL>
 	</Description>
 </RDF>
