@@ -31,7 +31,8 @@ net.streiff.unreadbadge = function ()
       "ignoreJunk" : true,
       "ignoreDrafts" : true,
       "ignoreTrash" : true,
-      "ignoreSent" : true
+      "ignoreSent" : true,
+      "inboxOnly" : false
    };
 
    Components.utils.import("resource://gre/modules/Services.jsm");
@@ -291,6 +292,11 @@ net.streiff.unreadbadge = function ()
       let totalCount = 0;
       let accountEnumerator = accounts.enumerate();
       let ignoreMask = 0;
+      let acceptMask = -1;
+
+      /* Only look at primary inbox? */
+      if (Services.prefs.getBoolPref(prefsPrefix + "inboxOnly"))
+         acceptMask = nsMsgFolderFlags.Inbox;
 
       ignoreMask |= nsMsgFolderFlags.Newsgroup;
       ignoreMask |= nsMsgFolderFlags.NewsHost;
@@ -305,6 +311,7 @@ net.streiff.unreadbadge = function ()
          ignoreMask |= nsMsgFolderFlags.Trash;
       if (Services.prefs.getBoolPref(prefsPrefix + "ignoreSent"))
          ignoreMask |= nsMsgFolderFlags.SentMail;
+
       while (accountEnumerator.hasMoreElements())
       {
          let account = accountEnumerator.getNext().QueryInterface(Ci.nsIMsgAccount);
@@ -316,12 +323,12 @@ net.streiff.unreadbadge = function ()
          Apparently you have to get all subfolders that are inboxes and do
          getNumUnread(true) on *those*. */
          if (((rootFolder.flags & ignoreMask) == 0) && (account.incomingServer.type != "rss"))
-            totalCount += getUnreadCountForFolder(rootFolder, ignoreMask);
+            totalCount += getUnreadCountForFolder(rootFolder, ignoreMask, acceptMask);
       }
       return totalCount;
    }
 
-   var getUnreadCountForFolder = function (folder, ignoreMask)
+   var getUnreadCountForFolder = function (folder, ignoreMask, acceptMask)
    {
       var totalCount = 0;
       var subfoldersEnumerator = folder.subFolders;
@@ -331,10 +338,10 @@ net.streiff.unreadbadge = function ()
 
          /* If there are subfolders, recurse. */
          if (subfolder.hasSubFolders)
-            totalCount += getUnreadCountForFolder(subfolder, ignoreMask);
+            totalCount += getUnreadCountForFolder(subfolder, ignoreMask, acceptMask);
 
          /* Only add to the unread count if it's not a type we want to ignore. */
-         if ((subfolder.flags & ignoreMask) == 0)
+         if (((subfolder.flags & ignoreMask) == 0) && !!(subfolder.flags & acceptMask))
             totalCount += subfolder.getNumUnread(false);
       }
       return totalCount;
