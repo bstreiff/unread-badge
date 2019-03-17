@@ -49,7 +49,7 @@ net.streiff.unreadbadge = function ()
    var setDefaultPreferences = function ()
    {
       let prefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefService);
-      let branch = prefs.getBranch(prefsPrefix);
+      let branch = prefs.getDefaultBranch(prefsPrefix);
       for (let key in defaultPrefs) {
          if (defaultPrefs.hasOwnProperty(key)) {
             let value = defaultPrefs[key];
