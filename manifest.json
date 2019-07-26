@@ -1,0 +1,18 @@
+{
+	"manifest_version": 2,
+	"applications": {
+		"gecko": {
+			"id": "unread-badge@streiff.net",
+			"strict_min_version": "68.0"
+		}
+	},
+	"name": "Unread Badge",
+	"version": "1.2.20190727",
+
+	"legacy": {
+		"type": "bootstrap",
+		"options": {
+			"page": "chrome://unread-badge/content/options.xul"
+		}
+	}
+}
