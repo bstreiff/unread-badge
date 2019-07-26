@@ -3,12 +3,21 @@
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/preferences/preferences.css" type="text/css"?>
 
-<prefwindow id="window" title="Unread Badge Options" xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-	<prefpane id="pane">
-		<preferences>
-			<preference id="pref-inboxOnly" name="extensions.unreadbadge.inboxOnly" type="bool"/>
-		</preferences>
+<dialog
+	title="Unread Badge Options"
+	xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+	xmlns:html="http://www.w3.org/1999/xhtml"
+	type="child"
+	style="width: 300px">
 
-		<checkbox preference="pref-inboxOnly" label="Count primary inbox only"/>
+	<prefpane>
+		<vbox>
+			<checkbox label="Count primary inbox only" preference="extensions.unreadbadge.inboxOnly" />
+		</vbox>
 	</prefpane>
-</prefwindow>
+
+	<separator />
+
+	<script type="application/javascript" src="chrome://global/content/preferencesBindings.js" />
+	<script type="application/javascript" src="options.js" />
+</dialog>
