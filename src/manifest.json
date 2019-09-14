@@ -7,6 +7,12 @@
 		}
 	},
 	"name": "Unread Badge",
+	"description": "An unread mail count badge for the Thunderbird icon in your Windows taskbar.",
+	"developer": {
+		"name": "Brandon Streiff"
+	},
+	"homepage_url": "https://github.com/bstreiff/unread-badge",
+
 	"version": "1.2.20190727",
 
 	"legacy": {
