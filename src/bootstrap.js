@@ -10,10 +10,7 @@
 
 'use strict';
 
-if (!net) var net = {};
-if (!net.streiff) net.streiff = {};
-
-net.streiff.unreadbadge = function ()
+var unreadbadge = function ()
 {
    const Cc = Components.classes;
    const Ci = Components.interfaces;
@@ -499,20 +496,20 @@ net.streiff.unreadbadge = function ()
 
 function install()
 {
-   net.streiff.unreadbadge.install();
+   unreadbadge.install();
 }
 
 function startup(aData, aReason)
 {
-   net.streiff.unreadbadge.startup(aData, aReason);
+   unreadbadge.startup(aData, aReason);
 }
 
 function shutdown(aData, aReason)
 {
-   net.streiff.unreadbadge.shutdown(aData, aReason);
+   unreadbadge.shutdown(aData, aReason);
 }
 
 function uninstall()
 {
-   net.streiff.unreadbadge.uninstall();
+   unreadbadge.uninstall();
 }
