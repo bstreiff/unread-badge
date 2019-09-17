@@ -12,11 +12,17 @@
 
 	<prefpane>
 		<vbox>
-			<checkbox label="Count primary inbox only" preference="extensions.unreadbadge.inboxOnly" />
+			<checkbox label="Count primary inbox only" preference="extensions.unreadbadge.inboxOnly" /><br />
+			<html:div>
+				<html:label for="badgeStyle">Badge style</html:label>
+				<menulist id="badgeStyle" preference="extensions.unreadbadge.badgeStyle">
+					<menupopup>
+						<menuitem label="Fruity" value="fruity" />
+					</menupopup>
+				</menulist>
+			</html:div>
 		</vbox>
 	</prefpane>
-
-	<separator />
 
 	<script type="application/javascript" src="chrome://global/content/preferencesBindings.js" />
 	<script type="application/javascript" src="options.js" />

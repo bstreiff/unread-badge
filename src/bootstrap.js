@@ -27,6 +27,7 @@ var unreadbadge = function ()
       // was only one badge, but now fixed colors are part of the badge design.
       // "badgeColor" : "#FF0000",
       // "textColor" : "#FFFFFF",
+      "badgeStyle" : "fruity",
       "ignoreJunk" : true,
       "ignoreDrafts" : true,
       "ignoreTrash" : true,
@@ -247,6 +248,11 @@ var unreadbadge = function ()
    }
    )();
 
+   var iconStyles =
+   {
+      "fruity": createFruityBadgeStyle,
+   };
+
    /* Make a badge icon for an unread message count of 'msgCount'.
     *
     * Returns an imgIContainer.
@@ -265,11 +271,15 @@ var unreadbadge = function ()
       else
          msgText = "99+";
 
+      let badgeStyle = Services.prefs.getCharPref(prefsPrefix + "badgeStyle");
+      if (!iconStyles.hasOwnProperty(badgeStyle))
+         badgeStyle = "fruity";
+
       let badge = gActiveWindow.document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
       badge.width = badge.height = iconSize4X;
       badge.style.width = badge.style.height = badge.width + "px";
 
-      createFruityBadgeStyle(badge, msgText);
+      iconStyles[badgeStyle](badge, msgText);
 
       badge = downsampleBy4X(badge);
 
