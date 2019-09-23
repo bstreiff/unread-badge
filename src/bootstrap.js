@@ -227,6 +227,7 @@ var unreadbadge = function ()
    var createBadgeIcon = function (msgCount)
    {
       const iconSize = overlayIconSize;
+      const iconSize4X = iconSize * 4;
 
       if (msgCount < 0)
          msgCount == 0;
@@ -238,11 +239,60 @@ var unreadbadge = function ()
          msgText = "99+";
 
       let badge = gActiveWindow.document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
-      badge.width = badge.height = iconSize;
-      badge.style.width = badge.style.height = iconSize + "px";
-      createCircularBadgeStyle(iconSize, iconSize, badge, msgText);
+      badge.width = badge.height = iconSize4X;
+      badge.style.width = badge.style.height = badge.width + "px";
+
+      createCircularBadgeStyle(iconSize4X, iconSize4X, badge, msgText);
+
+      badge = downsampleBy4X(badge);
 
       return getCanvasAsImgContainer(badge, iconSize, iconSize);
+   }
+
+   /* Downsample by 4X with simple averaging.
+    *
+    * Drawing at 4X and then downscaling like this gives us better results than
+    * using either CanvasRenderingContext2D.drawImage() to resize or letting
+    * the Windows taskbar service handle the resize, both of which seem to just
+    * give us a simple point resize.
+    *
+    * Returns a new <canvas> element.
+    */
+   var downsampleBy4X = function (canvas)
+   {
+      let resizedCanvas = gActiveWindow.document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
+      resizedCanvas.width = resizedCanvas.height = canvas.width / 4;
+      resizedCanvas.style.width = resizedCanvas.style.height = resizedCanvas.width + "px";
+
+      let source = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+      let downsampled = resizedCanvas.getContext("2d").createImageData(resizedCanvas.width, resizedCanvas.height);
+
+      for (let y = 0; y < resizedCanvas.height; ++y) {
+         for (let x = 0; x < resizedCanvas.width; ++x) {
+            let r = 0, g = 0, b = 0, a = 0;
+            let index;
+
+            for (let i = 0; i < 4; ++i) {
+               for (let j = 0; j < 4; ++j) {
+                  index = (((y*4)+i) * source.width + ((x*4)+j)) * 4;
+                  r += source.data[index];
+                  g += source.data[index + 1];
+                  b += source.data[index + 2];
+                  a += source.data[index + 3];
+               }
+            }
+
+            index = (y * downsampled.width + x) * 4;
+            downsampled.data[index] = Math.round(r / 16);
+            downsampled.data[index+1] = Math.round(g / 16);
+            downsampled.data[index+2] = Math.round(b / 16);
+            downsampled.data[index+3] = Math.round(a / 16);
+         }
+      }
+
+      resizedCanvas.getContext("2d").putImageData(downsampled, 0, 0);
+
+      return resizedCanvas;
    }
 
    /* Get the first window. */
