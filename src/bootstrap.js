@@ -105,7 +105,8 @@ var unreadbadge = function ()
       xpc.imgTools.encodeImage(imgIContainer, "image/png");
    }
 
-   var createCircularBadgeStyle = function (canvas, text)
+   /* Create a circular badge with a frame, akin to OS X prior to Yosemite. */
+   var createFruityBadgeStyle = function (canvas, text)
    {
       var cxt = canvas.getContext("2d");
       const iconSize = canvas.width;
@@ -243,7 +244,7 @@ var unreadbadge = function ()
       badge.width = badge.height = iconSize4X;
       badge.style.width = badge.style.height = badge.width + "px";
 
-      createCircularBadgeStyle(badge, msgText);
+      createFruityBadgeStyle(badge, msgText);
 
       badge = downsampleBy4X(badge);
 
