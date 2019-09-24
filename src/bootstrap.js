@@ -107,6 +107,37 @@ var unreadbadge = function ()
       xpc.imgTools.encodeImage(imgIContainer, "image/png");
    }
 
+   /* Draw text centered in the middle of a CanvasRenderingContext2D */
+   var drawUnreadCountText = function (cxt, text)
+   {
+      cxt.save();
+
+      const imageSize = cxt.canvas.width;
+
+      // Use smaller fonts for longer text to try and squeeze it in.
+      const fontSize = (imageSize * (0.95 - (0.15 * text.length)));
+
+      cxt.shadowOffsetX = 0;
+      cxt.shadowOffsetY = 0;
+      cxt.shadowColor = "rgba(0,0,0,0.7)";
+      cxt.shadowBlur = imageSize / 10;
+      cxt.font = "600 " + fontSize + "px Calibri";
+      cxt.fillStyle = '#FAFAFA';
+      cxt.textAlign = "center";
+
+      // TODO: There isn't a textBaseline for accurate vertical centering ('middle' is the
+      // middle of the 'em block', and digits extend higher than 'm'), and the Mozilla core
+      // does not currently support computation of ascenders and descenters in measureText().
+      // So, we just assume that the font is 70% of the 'px' height we requested, then
+      // compute where the baseline ought to be located.
+      const approximateHeight = fontSize * 0.70;
+
+      cxt.textBaseline = "alphabetic";
+      cxt.fillText(text, imageSize / 2, imageSize - (imageSize - approximateHeight) / 2);
+
+      cxt.restore();
+   }
+
    /* Create a circular badge with a frame, akin to OS X prior to Yosemite. */
    var createFruityBadgeStyle = function (canvas, text)
    {
@@ -161,15 +192,7 @@ var unreadbadge = function ()
       cxt.closePath();
       cxt.restore();
 
-      cxt.shadowOffsetX = 0;
-      cxt.shadowOffsetY = 0;
-      cxt.shadowColor = "rgba(0,0,0,0.7)";
-      cxt.shadowBlur = iconSize / 10;
-      cxt.font = (iconSize * 0.7) + "px Calibri bold";
-      cxt.textAlign = "center";
-      cxt.textBaseline = "middle";
-      cxt.fillStyle = "white";
-      cxt.fillText(text, iconSize / 2, iconSize / 2);
+      drawUnreadCountText(cxt, text);
    }
 
    /* Returns the size of the icon overlay.
