@@ -247,6 +247,38 @@ var unreadbadge = function ()
       drawUnreadCountText(cxt, text);
    }
 
+   /* Create an "envelope" badge, as is Outlook's style. */
+   var createEnvelopeBadgeStyle = function (canvas, text)
+   {
+      var cxt = canvas.getContext("2d");
+      const iconSize = canvas.width;
+
+      const envelopeWidth = 0.9375 * iconSize;
+      const envelopeHeight = 0.6875 * iconSize;
+      const lineWidth = 0.09375 * iconSize;
+      const foldTop = 0.09375 * iconSize;
+      const foldBottom = 0.4375 * iconSize;
+      const startX = iconSize - envelopeWidth;
+      const startY = iconSize - envelopeHeight;
+
+      // Draw the background.
+      cxt.save();
+      cxt.fillStyle = '#E9B471';
+      cxt.fillRect(startX, startY, envelopeWidth, envelopeHeight);
+      cxt.restore();
+
+      // Draw the strokes for the fold.
+      cxt.save();
+      cxt.strokeStyle = '#FFFFFF';
+      cxt.lineWidth = lineWidth;
+      cxt.beginPath();
+      cxt.moveTo(startX, startY + foldTop);
+      cxt.lineTo(startX + envelopeWidth / 2, startY + foldBottom);
+      cxt.lineTo(startX + envelopeWidth, startY + foldTop);
+      cxt.stroke();
+      cxt.restore();
+   }
+
    /* Returns the size of the icon overlay.
     *
     * The Mozilla framework will scale any icon we supply to the right size (handled
@@ -302,6 +334,7 @@ var unreadbadge = function ()
    var iconStyles =
    {
       "dot": createDotBadgeStyle,
+      "envelope": createEnvelopeBadgeStyle,
       "fruity": createFruityBadgeStyle,
       "modern": createModernBadgeStyle,
    };
