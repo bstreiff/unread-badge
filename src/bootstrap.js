@@ -139,6 +139,33 @@ var unreadbadge = function ()
       cxt.restore();
    }
 
+   /* Create a "dot" badge, akin to Discord. */
+   var createDotBadgeStyle = function (canvas, text)
+   {
+      var cxt = canvas.getContext("2d");
+      const iconSize = canvas.width;
+
+      // Draw the background.
+      cxt.save();
+      // Solid color first.
+      cxt.fillStyle = '#EF5858';
+      cxt.beginPath();
+      cxt.arc(iconSize / 2, iconSize / 2, iconSize / 2.25, 0, Math.PI * 2, true);
+      cxt.fill();
+      cxt.clip();
+      cxt.closePath();
+      cxt.restore();
+
+      // Draw the dot.
+      cxt.save();
+      cxt.fillStyle = '#FAFAFA';
+      cxt.beginPath();
+      cxt.arc(iconSize / 2, iconSize / 2, iconSize / 5, 0, Math.PI * 2, true);
+      cxt.fill();
+      cxt.closePath();
+      cxt.restore();
+   }
+
    /* Create a circular badge with a frame, akin to OS X prior to Yosemite. */
    var createFruityBadgeStyle = function (canvas, text)
    {
@@ -274,6 +301,7 @@ var unreadbadge = function ()
 
    var iconStyles =
    {
+      "dot": createDotBadgeStyle,
       "fruity": createFruityBadgeStyle,
       "modern": createModernBadgeStyle,
    };

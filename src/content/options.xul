@@ -17,6 +17,7 @@
 				<html:label for="badgeStyle">Badge style</html:label>
 				<menulist id="badgeStyle" preference="extensions.unreadbadge.badgeStyle">
 					<menupopup>
+						<menuitem label="Dot" value="dot" />
 						<menuitem label="Fruity" value="fruity" />
 						<menuitem label="Modern" value="modern" />
 					</menupopup>
