@@ -105,31 +105,32 @@ var unreadbadge = function ()
       xpc.imgTools.encodeImage(imgIContainer, "image/png");
    }
 
-   var createCircularBadgeStyle = function (imageWidth, imageHeight, canvas, text)
+   var createCircularBadgeStyle = function (canvas, text)
    {
       var cxt = canvas.getContext("2d");
+      const iconSize = canvas.width;
 
       // Draw the background.
       cxt.save();
       // Solid color first.
       cxt.fillStyle = Services.prefs.getCharPref(prefsPrefix + "badgeColor");
       cxt.beginPath();
-      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.arc(iconSize / 2, iconSize / 2, iconSize / 2.15, 0, Math.PI * 2, true);
       cxt.fill();
       cxt.clip();
       cxt.closePath();
 
       // Create a gradient to blend on top of it.
       var gradient = cxt.createRadialGradient(
-            imageWidth / 2, imageHeight / 2.5, 0,
-            imageWidth / 2, imageHeight / 2, imageWidth / 2);
+            iconSize / 2, iconSize / 2.5, 0,
+            iconSize / 2, iconSize / 2, iconSize / 2);
       gradient.addColorStop(0, "rgba(255,255,255,0)");
       gradient.addColorStop(1, "rgba(0,0,0,0.5)");
       cxt.fillStyle = gradient;
 
       // Blend it.
       cxt.beginPath();
-      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.arc(iconSize / 2, iconSize / 2, iconSize / 2.15, 0, Math.PI * 2, true);
       cxt.fill();
       cxt.clip();
       cxt.closePath();
@@ -138,7 +139,7 @@ var unreadbadge = function ()
       cxt.fillStyle = "rgba(255,255,255,0.2)";
       cxt.scale(1, 0.5);
       cxt.beginPath();
-      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.arc(iconSize / 2, iconSize / 2, iconSize / 2.15, 0, Math.PI * 2, true);
       cxt.fill();
       cxt.closePath();
       cxt.restore();
@@ -148,11 +149,11 @@ var unreadbadge = function ()
       cxt.shadowOffsetX = 0;
       cxt.shadowOffsetY = 0;
       cxt.shadowColor = "rgba(0,0,0,0.7)";
-      cxt.shadowBlur = imageWidth / 10;
+      cxt.shadowBlur = iconSize / 10;
       cxt.strokeStyle = Services.prefs.getCharPref(prefsPrefix + "textColor");
-      cxt.lineWidth = imageWidth / 10;
+      cxt.lineWidth = iconSize / 10;
       cxt.beginPath();
-      cxt.arc(imageWidth / 2, imageHeight / 2, imageWidth / 2.15, 0, Math.PI * 2, true);
+      cxt.arc(iconSize / 2, iconSize / 2, iconSize / 2.15, 0, Math.PI * 2, true);
       cxt.stroke();
       cxt.closePath();
       cxt.restore();
@@ -160,12 +161,12 @@ var unreadbadge = function ()
       cxt.shadowOffsetX = 0;
       cxt.shadowOffsetY = 0;
       cxt.shadowColor = "rgba(0,0,0,0.7)";
-      cxt.shadowBlur = imageWidth / 10;
-      cxt.font = (imageHeight * 0.7) + "px Calibri bold";
+      cxt.shadowBlur = iconSize / 10;
+      cxt.font = (iconSize * 0.7) + "px Calibri bold";
       cxt.textAlign = "center";
       cxt.textBaseline = "middle";
       cxt.fillStyle = "white";
-      cxt.fillText(text, imageWidth / 2, imageHeight / 2);
+      cxt.fillText(text, iconSize / 2, iconSize / 2);
    }
 
    /* Returns the size of the icon overlay.
@@ -242,7 +243,7 @@ var unreadbadge = function ()
       badge.width = badge.height = iconSize4X;
       badge.style.width = badge.style.height = badge.width + "px";
 
-      createCircularBadgeStyle(iconSize4X, iconSize4X, badge, msgText);
+      createCircularBadgeStyle(badge, msgText);
 
       badge = downsampleBy4X(badge);
 
