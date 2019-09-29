@@ -23,8 +23,10 @@ var unreadbadge = function ()
    const prefsPrefix = "extensions.unreadbadge.";
    const defaultPrefs =
    {
-      "badgeColor" : "#FF0000",
-      "textColor" : "#FFFFFF",
+      // These (hidden) settings were used for customizing badge colors when there
+      // was only one badge, but now fixed colors are part of the badge design.
+      // "badgeColor" : "#FF0000",
+      // "textColor" : "#FFFFFF",
       "ignoreJunk" : true,
       "ignoreDrafts" : true,
       "ignoreTrash" : true,
@@ -114,7 +116,7 @@ var unreadbadge = function ()
       // Draw the background.
       cxt.save();
       // Solid color first.
-      cxt.fillStyle = Services.prefs.getCharPref(prefsPrefix + "badgeColor");
+      cxt.fillStyle = '#FF0000';
       cxt.beginPath();
       cxt.arc(iconSize / 2, iconSize / 2, iconSize / 2.15, 0, Math.PI * 2, true);
       cxt.fill();
@@ -151,7 +153,7 @@ var unreadbadge = function ()
       cxt.shadowOffsetY = 0;
       cxt.shadowColor = "rgba(0,0,0,0.7)";
       cxt.shadowBlur = iconSize / 10;
-      cxt.strokeStyle = Services.prefs.getCharPref(prefsPrefix + "textColor");
+      cxt.strokeStyle = '#FAFAFA';
       cxt.lineWidth = iconSize / 10;
       cxt.beginPath();
       cxt.arc(iconSize / 2, iconSize / 2, iconSize / 2.15, 0, Math.PI * 2, true);
