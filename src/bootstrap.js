@@ -27,7 +27,7 @@ var unreadbadge = function ()
       // was only one badge, but now fixed colors are part of the badge design.
       // "badgeColor" : "#FF0000",
       // "textColor" : "#FFFFFF",
-      "badgeStyle" : "fruity",
+      "badgeStyle" : "modern",
       "ignoreJunk" : true,
       "ignoreDrafts" : true,
       "ignoreTrash" : true,
@@ -196,6 +196,30 @@ var unreadbadge = function ()
       drawUnreadCountText(cxt, text);
    }
 
+   /* Create a flat badge, as is the Windows 8/10 style. */
+   var createModernBadgeStyle = function (canvas, text)
+   {
+      var cxt = canvas.getContext("2d");
+      const iconSize = canvas.width;
+
+      // Draw the background.
+      cxt.save();
+      // Solid color first.
+      cxt.fillStyle = '#D01536';
+      cxt.shadowOffsetX = 0;
+      cxt.shadowOffsetY = 0;
+      cxt.shadowColor = "rgba(0,0,0,0.8)";
+      cxt.shadowBlur = iconSize / 10;
+      cxt.beginPath();
+      cxt.arc(iconSize / 2, iconSize / 2, iconSize / 2.25, 0, Math.PI * 2, true);
+      cxt.fill();
+      cxt.clip();
+      cxt.closePath();
+      cxt.restore();
+
+      drawUnreadCountText(cxt, text);
+   }
+
    /* Returns the size of the icon overlay.
     *
     * The Mozilla framework will scale any icon we supply to the right size (handled
@@ -251,6 +275,7 @@ var unreadbadge = function ()
    var iconStyles =
    {
       "fruity": createFruityBadgeStyle,
+      "modern": createModernBadgeStyle,
    };
 
    /* Make a badge icon for an unread message count of 'msgCount'.
