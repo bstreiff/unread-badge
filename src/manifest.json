@@ -3,7 +3,7 @@
 	"applications": {
 		"gecko": {
 			"id": "unread-badge@streiff.net",
-			"strict_min_version": "68.0"
+			"strict_min_version": "78.0"
 		}
 	},
 	"name": "Unread Badge",
@@ -13,12 +13,20 @@
 	},
 	"homepage_url": "https://github.com/bstreiff/unread-badge",
 
-	"version": "2.0.0",
+	"version": "3.0.0",
 
-	"legacy": {
-		"type": "bootstrap",
-		"options": {
-			"page": "chrome://unread-badge/content/options.xul"
+	"experiment_apis": {
+		"BootstrapLoader": {
+			"schema": "api/BootstrapLoader/schema.json",
+			"parent": {
+				"scopes": ["addon_parent"],
+				"paths": [["BootstrapLoader"]],
+				"script": "api/BootstrapLoader/implementation.js"
+			}
 		}
+	},
+
+	"background": {
+		"scripts": ["background.js"]
 	}
 }
