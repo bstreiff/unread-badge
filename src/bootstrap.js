@@ -422,7 +422,7 @@ var unreadbadge = function ()
    var findActiveWindow = function ()
    {
       let windows = Services.wm.getEnumerator(null);
-      let win = windows.hasMoreElements() ? windows.getNext().QueryInterface(Ci.nsIDOMWindow) : null;
+      let win = windows.hasMoreElements() ? windows.getNext() : null;
       setActiveWindow(win);
    }
 
@@ -441,15 +441,14 @@ var unreadbadge = function ()
       observe : function (aSubject, aTopic, aData)
       {
          // Look for domwindowopened and domwindowclosed messages
-         let win = aSubject.QueryInterface(Ci.nsIDOMWindow);
          if (aTopic == "domwindowopened")
          {
             if (!gActiveWindow)
-               setActiveWindow(win);
+               setActiveWindow(aSubject);
          }
          else if (aTopic == "domwindowclosed")
          {
-            if (win == gActiveWindow)
+            if (aSubject == gActiveWindow)
                findActiveWindow();
          }
       }
@@ -519,10 +518,9 @@ var unreadbadge = function ()
 
    var getActiveWindowOverlayIconController = function ()
    {
-      let docshell = gActiveWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+      let docshell = gActiveWindow
          .getInterface(Ci.nsIWebNavigation).QueryInterface(Ci.nsIDocShellTreeItem)
-         .treeOwner.QueryInterface(Ci.nsIInterfaceRequestor)
-         .getInterface(Ci.nsIXULWindow).docShell;
+         .treeOwner.getInterface(Ci.nsIXULWindow).docShell;
 
       return xpc.taskbar.getOverlayIconController(docshell);
    }
