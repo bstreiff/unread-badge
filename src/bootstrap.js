@@ -518,9 +518,10 @@ var unreadbadge = function ()
 
    var getActiveWindowOverlayIconController = function ()
    {
-      let docshell = gActiveWindow
-         .getInterface(Ci.nsIWebNavigation).QueryInterface(Ci.nsIDocShellTreeItem)
-         .treeOwner.getInterface(Ci.nsIXULWindow).docShell;
+      let docshell = Cc["@mozilla.org/appshell/window-mediator;1"]
+        .getService(Ci.nsIWindowMediator)
+        .getMostRecentBrowserWindow()
+        .docShell;
 
       return xpc.taskbar.getOverlayIconController(docshell);
    }
