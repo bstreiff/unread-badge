@@ -510,7 +510,6 @@ var unreadbadge = function ()
    {
       let accounts = xpc.acctMgr.accounts;
       let totalCount = 0;
-      let accountEnumerator = accounts.enumerate();
       let ignoreMask = 0;
       let acceptMask = -1;
 
@@ -532,9 +531,8 @@ var unreadbadge = function ()
       if (Services.prefs.getBoolPref(prefsPrefix + "ignoreSent"))
          ignoreMask |= nsMsgFolderFlags.SentMail;
 
-      while (accountEnumerator.hasMoreElements())
+      for (const account of accounts)
       {
-         let account = accountEnumerator.getNext().QueryInterface(Ci.nsIMsgAccount);
          let rootFolder = account.incomingServer.rootMsgFolder;
          /* nsIMsgFolder */
 
