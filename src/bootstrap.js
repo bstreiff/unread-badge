@@ -38,7 +38,7 @@ var unreadbadge = function ()
    Components.utils.import("resource://gre/modules/Services.jsm");
    Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
    Components.utils.import("resource://gre/modules/NetUtil.jsm");
-   
+
    var xpc = {};
 
    XPCOMUtils.defineLazyServiceGetter(xpc, "imgTools", "@mozilla.org/image/tools;1", "imgITools");
@@ -78,7 +78,7 @@ var unreadbadge = function ()
          return xpc.imgTools.decodeImageFromBuffer(imgBuffer, imgBuffer.length, "image/png");
       }
    }
-   
+
    var getCanvasAsImgContainer = function (canvas, width, height)
    {
       var imageData = canvas.getContext('2d').getImageData(
@@ -103,9 +103,60 @@ var unreadbadge = function ()
       return iconImage;
    }
 
-   var forceImgIContainerDecode = function (imgIContainer)
+   var isDecodedImgIContainer = function (imgIContainer)
    {
+      try {
+        /* Result is not needed, only whether it throws exception */
+        imgIContainer.animated;
+      } catch (err) {
+        if (err.result == 2147746065) {
+          /* 0x80040111 (NS_ERROR_NOT_AVAILABLE) */
+          return false;
+        }
+      }
+
+      return true;
+   }
+
+   var sleep = function (ms)
+   {
+     return new Promise(resolve => gActiveWindow.setTimeout(resolve, ms));
+   }
+
+   /*
+    * When setOverlayIcon() receives an image that is not decoded yet,
+    * it throws NS_ERROR_NOT_AVAILABLE when trying to check whether
+    * image is animated, see these in Thunderbird sources:
+    * TaskbarWindowPreview::SetOverlayIcon()
+    * RasterImage::GetAnimated()
+    */
+   var forceImgIContainerDecode = async function (imgIContainer)
+   {
+      /* Purge image from cache to force encodeImage() to not be lazy */
+      imgIContainer.requestDiscard();
+
+      /* Side effect of encodeImage() is that it decodes original image */
       xpc.imgTools.encodeImage(imgIContainer, "image/png");
+
+      /* To make it worse, .encode() uses 'FLAG_ASYNC_NOTIFY' which causes
+       * 'mHasBeenDecoded' to be lazily updated on the thread that runs this
+       * script. In order to make it happen, pause the script a bit. Wait
+       * until '.animated' stops returning 'NS_ERROR_NOT_AVAILABLE'.
+       */
+      await sleep(0);
+      if (isDecodedImgIContainer())
+        return;
+
+      /* No luck, wait longer */
+      for (i = 0; i < 32; i++) {
+        await sleep(32);
+        if (isDecodedImgIContainer()) {
+          console.log("unread-badge: forceImgIContainerDecode() took " + i + " sleep iterations");
+          return;
+        }
+      }
+
+      console.log("unread-badge: forceImgIContainerDecode() is broken again");
    }
 
    /* Draw text centered in the middle of a CanvasRenderingContext2D */
@@ -419,37 +470,37 @@ var unreadbadge = function ()
    }
 
    /* Get the first window. */
-   var findActiveWindow = function ()
+   var findActiveWindow = async function ()
    {
       let windows = Services.wm.getEnumerator(null);
       let win = windows.hasMoreElements() ? windows.getNext() : null;
-      setActiveWindow(win);
+      await setActiveWindow(win);
    }
 
    var gActiveWindow = null;
-   var setActiveWindow = function (aWin)
+   var setActiveWindow = async function (aWin)
    {
       // We're assuming that if gActiveWindow is non-null, we only get called when
       // it's closed.
       gActiveWindow = aWin;
       if (gActiveWindow)
-         updateOverlayIcon();
+         await updateOverlayIcon();
    }
 
    var gWindowObserver =
    {
-      observe : function (aSubject, aTopic, aData)
+      observe : async function (aSubject, aTopic, aData)
       {
          // Look for domwindowopened and domwindowclosed messages
          if (aTopic == "domwindowopened")
          {
             if (!gActiveWindow)
-               setActiveWindow(aSubject);
+               await setActiveWindow(aSubject);
          }
          else if (aTopic == "domwindowclosed")
          {
             if (aSubject == gActiveWindow)
-               findActiveWindow();
+               await findActiveWindow();
          }
       }
    };
@@ -528,7 +579,7 @@ var unreadbadge = function ()
 
    var updateTimerId = null;
 
-   var updateOverlayIcon = function ()
+   var updateOverlayIcon = async function ()
    {
       if (gActiveWindow)
       {
@@ -538,7 +589,7 @@ var unreadbadge = function ()
          if (messageCount > 0)
          {
             var icon = createBadgeIcon(messageCount);
-            forceImgIContainerDecode(icon);
+            await forceImgIContainerDecode(icon);
             controller.setOverlayIcon(icon, "Message Count");
          }
          else
@@ -638,7 +689,7 @@ var unreadbadge = function ()
       {
          /* nothing to do */
       },
-      startup : function (aData, aReason)
+      startup : async function (aData, aReason)
       {
          setDefaultPreferences();
          if (!xpc.taskbar.available)
@@ -647,7 +698,7 @@ var unreadbadge = function ()
          xpc.mailSession.AddFolderListener(folderListener, Ci.nsIFolderListener.propertyFlagChanged | Ci.nsIFolderListener.event);
          xpc.notificationService.addListener(msgFolderListener, xpc.notificationService.msgAdded | xpc.notificationService.msgsDeleted | xpc.notificationService.folderDeleted | xpc.notificationService.itemEvent);
          Services.prefs.addObserver(prefsPrefix, prefsObserver, false);
-         findActiveWindow();
+         await findActiveWindow();
       },
       shutdown : function (aData, aReason)
       {
