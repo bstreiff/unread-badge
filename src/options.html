@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8"/>
+	<script src="options.js"></script>
+</head>
+<body>
+	<form>
+		<div class="browser-style">
+			<label class="browser-style" for="badgeStyle">Badge style</label>
+			<select class="browser-style" name="badgeStyle" id="badgeStyle">
+				<option value="modern">Modern (default)</option>
+				<option value="dot">Dot</option>
+				<option value="envelope">Envelope</option>
+				<option value="fruity">Fruity</option>
+			</select>
+		</div>
+
+		<div class="browser-style">
+			<input class="browser-style" type="checkbox" name="inboxOnly" id="inboxOnly" />
+			<label class="browser-style" for="inboxOnly">Only count inboxes</label>
+		</div>
+
+		<div class="browser-style">
+			<input class="browser-style" type="checkbox" name="includeDrafts" id="includeDrafts" />
+			<label class="browser-style" for="includeDrafts">Include Drafts folders</label>
+		</div>
+
+		<div class="browser-style">
+			<input class="browser-style" type="checkbox" name="includeJunk" id="includeJunk" />
+			<label class="browser-style" for="includeJunk">Include Junk folders</label>
+		</div>
+
+		<div class="browser-style">
+			<input class="browser-style" type="checkbox" name="includeSent" id="includeSent" />
+			<label class="browser-style" for="includeSent">Include Sent folders</label>
+		</div>
+
+		<div class="browser-style">
+			<input class="browser-style" type="checkbox" name="includeTrash" id="includeTrash" />
+			<label class="browser-style" for="includeTrash">Include Trash folders</label>
+		</div>
+
+		<button class="browser-style" type="submit">Save</button>
+	</form>
+</body>
+</html>

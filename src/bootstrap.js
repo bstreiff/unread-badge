@@ -20,18 +20,13 @@ var unreadbadge = function ()
     */
    const nsMsgFolderFlags = Ci.nsMsgFolderFlags;
 
-   const prefsPrefix = "extensions.unreadbadge.";
-   const defaultPrefs =
+   const DEFAULT_PREFERENCES =
    {
-      // These (hidden) settings were used for customizing badge colors when there
-      // was only one badge, but now fixed colors are part of the badge design.
-      // "badgeColor" : "#FF0000",
-      // "textColor" : "#FFFFFF",
       "badgeStyle" : "modern",
-      "ignoreJunk" : true,
-      "ignoreDrafts" : true,
-      "ignoreTrash" : true,
-      "ignoreSent" : true,
+      "includeJunk" : false,
+      "includeDrafts" : false,
+      "includeTrash" : false,
+      "includeSent" : false,
       "inboxOnly" : false
    };
 
@@ -47,21 +42,27 @@ var unreadbadge = function ()
    XPCOMUtils.defineLazyServiceGetter(xpc, "mailSession", "@mozilla.org/messenger/services/session;1", "nsIMsgMailSession");
    XPCOMUtils.defineLazyServiceGetter(xpc, "notificationService", "@mozilla.org/messenger/msgnotificationservice;1", "nsIMsgFolderNotificationService");
 
-   var setDefaultPreferences = function ()
+   var setDefaultPreferences = async function()
    {
-      let prefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefService);
-      let branch = prefs.getDefaultBranch(prefsPrefix);
-      for (let key in defaultPrefs) {
-         if (defaultPrefs.hasOwnProperty(key)) {
-            let value = defaultPrefs[key];
-            if (typeof value == "boolean")
-               branch.setBoolPref(key, value);
-            else if (typeof value == "number")
-               branch.setIntPref(key, value);
-            else if (typeof value == "string")
-               branch.setCharPref(key, value);
+      const SCHEMA_VERSION = 1;
+      const results = await messenger.storage.local.get("preferences");
+      const currentSchema = (results.preferences && results.preferences.schema ? results.preferences.schema : 0);
+
+      if (currentSchema >= SCHEMA_VERSION)
+         return;
+
+      let newPrefsObj = results.preferences || {};
+
+      for (let key in DEFAULT_PREFERENCES) {
+         if (DEFAULT_PREFERENCES.hasOwnProperty(key)) {
+            if (!newPrefsObj.hasOwnProperty(key)) {
+               newPrefsObj[key] = DEFAULT_PREFERENCES[key];
+            }
          }
       }
+
+      newPrefsObj.version = SCHEMA_VERSION;
+      await messenger.storage.local.set({ preferences: newPrefsObj });
    }
 
    var decodeImageToPng = function (imgEncoder)
@@ -342,7 +343,7 @@ var unreadbadge = function ()
     *
     * Returns an imgIContainer.
     */
-   var createBadgeIcon = function (window, msgCount)
+   var createBadgeIcon = async function (window, msgCount)
    {
       const iconSize = overlayIconSize(window);
       const iconSize4X = iconSize * 4;
@@ -356,9 +357,11 @@ var unreadbadge = function ()
       else
          msgText = "99+";
 
-      let badgeStyle = Services.prefs.getCharPref(prefsPrefix + "badgeStyle");
-      if (!iconStyles.hasOwnProperty(badgeStyle))
-         badgeStyle = "fruity";
+      let prefsResult = await messenger.storage.local.get("preferences");
+      let prefs = prefsResult.preferences;
+      let badgeStyle = prefs.badgeStyle;
+      if (badgeStyle === undefined || !iconStyles.hasOwnProperty(badgeStyle))
+         badgeStyle = "modern";
 
       let badge = gActiveWindow.document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
       badge.width = badge.height = iconSize4X;
@@ -454,7 +457,7 @@ var unreadbadge = function ()
    };
 
    /* Enumerate all accounts and get the combined unread count. */
-   var getUnreadCountForAllAccounts = function ()
+   var getUnreadCountForAllAccounts = async function ()
    {
       let accounts = xpc.acctMgr.accounts;
       let totalCount = 0;
@@ -462,7 +465,10 @@ var unreadbadge = function ()
       let acceptMask = -1;
 
       /* Only look at primary inbox? */
-      if (Services.prefs.getBoolPref(prefsPrefix + "inboxOnly"))
+      let prefsResult = await messenger.storage.local.get("preferences");
+      let prefs = prefsResult.preferences;
+
+      if (prefs.inboxOnly)
          acceptMask = nsMsgFolderFlags.Inbox;
 
       ignoreMask |= nsMsgFolderFlags.Newsgroup;
@@ -470,13 +476,13 @@ var unreadbadge = function ()
       ignoreMask |= nsMsgFolderFlags.Virtual;
       ignoreMask |= nsMsgFolderFlags.Subscribed;
 
-      if (Services.prefs.getBoolPref(prefsPrefix + "ignoreJunk"))
+      if (!prefs.includeJunk)
          ignoreMask |= nsMsgFolderFlags.Junk;
-      if (Services.prefs.getBoolPref(prefsPrefix + "ignoreDrafts"))
+      if (!prefs.includeDrafts)
          ignoreMask |= nsMsgFolderFlags.Drafts;
-      if (Services.prefs.getBoolPref(prefsPrefix + "ignoreTrash"))
+      if (!prefs.includeTrash)
          ignoreMask |= nsMsgFolderFlags.Trash;
-      if (Services.prefs.getBoolPref(prefsPrefix + "ignoreSent"))
+      if (!prefs.includeSent)
          ignoreMask |= nsMsgFolderFlags.SentMail;
 
       for (const account of accounts)
@@ -531,10 +537,10 @@ var unreadbadge = function ()
       {
          let controller = getActiveWindowOverlayIconController();
 
-         var messageCount = getUnreadCountForAllAccounts();
+         var messageCount = await getUnreadCountForAllAccounts();
          if (messageCount > 0)
          {
-            var icon = createBadgeIcon(gActiveWindow, messageCount);
+            var icon = await createBadgeIcon(gActiveWindow, messageCount);
             await forceImgIContainerDecode(icon);
             controller.setOverlayIcon(icon, "Message Count");
          }
@@ -620,14 +626,6 @@ var unreadbadge = function ()
       },
    };
 
-   var prefsObserver =
-   {
-      observe : function (aSubject, aTopic, aData)
-      {
-         queueOverlayIconUpdate();
-      }
-   };
-
    /* The exported interface */
    var exportedInterface =
    {
@@ -637,21 +635,20 @@ var unreadbadge = function ()
       },
       startup : async function (aData, aReason)
       {
-         setDefaultPreferences();
+         await setDefaultPreferences();
          if (!xpc.taskbar.available)
             return;
          Services.ww.registerNotification(gWindowObserver);
          xpc.mailSession.AddFolderListener(folderListener, Ci.nsIFolderListener.propertyFlagChanged | Ci.nsIFolderListener.event);
          xpc.notificationService.addListener(msgFolderListener, xpc.notificationService.msgAdded | xpc.notificationService.msgsDeleted | xpc.notificationService.folderDeleted | xpc.notificationService.itemEvent);
-         Services.prefs.addObserver(prefsPrefix, prefsObserver, false);
          await findActiveWindow();
+         messenger.storage.onChanged.addListener(queueOverlayIconUpdate);
       },
       shutdown : function (aData, aReason)
       {
          xpc.notificationService.removeListener(msgFolderListener);
          xpc.mailSession.RemoveFolderListener(folderListener);
          Services.ww.unregisterNotification(gWindowObserver);
-         Services.prefs.removeObserver(prefsPrefix, prefsObserver);
          clearOverlayIcon();
       },
       uninstall : function ()
