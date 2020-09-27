@@ -14,6 +14,10 @@
 	"homepage_url": "https://github.com/bstreiff/unread-badge",
 
 	"version": "3.0.0",
+	"icons": {
+		"48": "icon_48.png",
+		"96": "icon_96.png"
+	},
 
 	"experiment_apis": {
 		"BootstrapLoader": {
