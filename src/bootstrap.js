@@ -330,57 +330,14 @@ var unreadbadge = function ()
       cxt.restore();
    }
 
-   /* Returns the size of the icon overlay.
-    *
-    * The Mozilla framework will scale any icon we supply to the right size (handled
-    * in nsWindowGfx::CreateIcon), but the scaling looks pretty crappy. If we know
-    * what size we need, we can generate something that looks a lot nicer.
-    *
-    * If this were native code, GetSystemMetrics(SM_CXSMICON) would be exactly what
-    * we would do. Even within the Mozilla framework, nsWindowGfx::GetIconMetrics(
-    * nsWindowGfx::kSmallIcon) would also work, but it's not exposed via XPCOM.
-    *
-    * So instead we have to do it the hard way, and try to figure out what Windows
-    * is going to do based on registry entries. Yuck.
-    *
-    * Relevant entries are:
-    * - HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, "Shell Small Icon Size"
-    *   (might not exist, if not then move on to:)
-    * - HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, "Shell Icon Size"
-    *   (if exists and the small one doesn't, then take it and divide by two)
-    * - HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, "AppliedDPI".
-    *   Default is 96. Scales up based on magnification setting. (125% is 120, 150% is 144, etc).
-    *
-    * The resulting icon size is (AppliedDPI / 96) * SmallIconSize.
-    *
-    * We memoize this, because Windows requires a logoff/logon when changing these
-    * settings, which means there's no need for us to requery every time during the
-    * lifetime of a single Thunderbird process.
-    */
-   var overlayIconSize = (function ()
+   /* Returns the size of the icon overlay. */
+   var overlayIconSize = function (window)
    {
-      var smallIconSize = 16;
-      var appliedDpi = 96;
-
-      let nsIWindowsRegKey = Components.classes["@mozilla.org/windows-registry-key;1"].getService(Components.interfaces.nsIWindowsRegKey);
-      nsIWindowsRegKey.open(
-         nsIWindowsRegKey.ROOT_KEY_CURRENT_USER,
-         "Control Panel\\Desktop\\WindowMetrics",
-         nsIWindowsRegKey.ACCESS_READ);
-
-      if (nsIWindowsRegKey.hasValue("Shell Small Icon Size") && nsIWindowsRegKey.getValueType("Shell Small Icon Size") == nsIWindowsRegKey.TYPE_INT)
-         smallIconSize = nsIWindowsRegKey.readIntValue("Shell Small Icon Size");
-      else if (nsIWindowsRegKey.hasValue("Shell Icon Size") && nsIWindowsRegKey.getValueType("Shell Icon Size") == nsIWindowsRegKey.TYPE_INT)
-         smallIconSize = Math.floor(nsIWindowsRegKey.readIntValue("Shell Icon Size") / 2);
-
-      if (nsIWindowsRegKey.hasValue("AppliedDPI") && nsIWindowsRegKey.getValueType("AppliedDPI") == nsIWindowsRegKey.TYPE_INT)
-         appliedDpi = nsIWindowsRegKey.readIntValue("AppliedDPI");
-
-      nsIWindowsRegKey.close();
+      var smallIconSize = Cc["@mozilla.org/windows-ui-utils;1"].getService(Ci.nsIWindowsUIUtils).systemSmallIconSize;
+      var appliedDpi = window.windowUtils.displayDPI;
 
       return (Math.floor(appliedDpi / 96 * smallIconSize));
-   }
-   )();
+   };
 
    var iconStyles =
    {
@@ -394,9 +351,9 @@ var unreadbadge = function ()
     *
     * Returns an imgIContainer.
     */
-   var createBadgeIcon = function (msgCount)
+   var createBadgeIcon = function (window, msgCount)
    {
-      const iconSize = overlayIconSize;
+      const iconSize = overlayIconSize(window);
       const iconSize4X = iconSize * 4;
 
       if (msgCount < 0)
@@ -586,7 +543,7 @@ var unreadbadge = function ()
          var messageCount = getUnreadCountForAllAccounts();
          if (messageCount > 0)
          {
-            var icon = createBadgeIcon(messageCount);
+            var icon = createBadgeIcon(gActiveWindow, messageCount);
             await forceImgIContainerDecode(icon);
             controller.setOverlayIcon(icon, "Message Count");
          }
