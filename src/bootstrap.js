@@ -66,17 +66,8 @@ var unreadbadge = function ()
 
    var decodeImageToPng = function (imgEncoder)
    {
-      if (xpc.imgTools.decodeImage)
-      {
-         /* Thunderbird < 60 */
-         return xpc.imgTools.decodeImage(imgEncoder, "image/png");
-      }
-      else
-      {
-         /* Thunderbird 60+ */
-         let imgBuffer = NetUtil.readInputStreamToString(imgEncoder, imgEncoder.available());
-         return xpc.imgTools.decodeImageFromBuffer(imgBuffer, imgBuffer.length, "image/png");
-      }
+      let imgBuffer = NetUtil.readInputStreamToString(imgEncoder, imgEncoder.available());
+      return xpc.imgTools.decodeImageFromBuffer(imgBuffer, imgBuffer.length, "image/png");
    }
 
    var getCanvasAsImgContainer = function (canvas, width, height)
