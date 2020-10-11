@@ -21,6 +21,7 @@ archive.on("error", function(err) {
 });
 
 archive.pipe(output);
+archive.file('LICENSE');
 archive.directory("src/", false);
 archive.finalize();
 
