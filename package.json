@@ -2,8 +2,9 @@
   "name": "unread-badge",
   "version": "3.0.0",
   "description": "Thunderbird Extension for displaying a unread mail count on Windows taskbar",
-  "main": "index.js",
+  "main": "src/background.js",
   "scripts": {
+    "build": "node build.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -18,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/bstreiff/unread-badge/issues"
   },
-  "homepage": "https://github.com/bstreiff/unread-badge#readme"
+  "homepage": "https://github.com/bstreiff/unread-badge#readme",
+  "devDependencies": {
+    "archiver": "^5.0.2"
+  }
 }

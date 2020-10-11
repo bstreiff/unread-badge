@@ -1,2 +1,5 @@
 # ignore build artifacts
 xpi/
+
+# ignore dependencies from npm
+node_modules/
