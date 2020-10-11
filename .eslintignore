@@ -1,0 +1,2 @@
+# comes from an upstream source, don't lint
+/src/api/BootstrapLoader/*.js
