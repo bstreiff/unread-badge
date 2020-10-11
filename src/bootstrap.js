@@ -1,11 +1,5 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
-//
-// Credit also goes to:
-//   https://github.com/sid0/overlay-extension/blob/master/bootstrap.js
-//   https://github.com/lpiepiora/docky-thunderbird/blob/master/src/chrome/content/dockyunread.js
-// for helping me figure out how to make this all come together.
+// SPDX-License-Identifier: MPL-2.0
+// SPDX-FileCopyrightText: 2013-2020 Brandon Streiff
 
 "use strict";
 
