@@ -1,0 +1,22 @@
+{
+  "name": "unread-badge",
+  "version": "3.0.0",
+  "description": "Thunderbird Extension for displaying a unread mail count on Windows taskbar",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bstreiff/unread-badge.git"
+  },
+  "keywords": [
+    "thunderbird"
+  ],
+  "author": "Brandon Streiff",
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/bstreiff/unread-badge/issues"
+  },
+  "homepage": "https://github.com/bstreiff/unread-badge#readme"
+}
