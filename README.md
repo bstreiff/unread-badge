@@ -21,6 +21,7 @@ to count the primary inbox only.
 
 ## Building
 - Install [nodejs](https://nodejs.org/) (I've used 12.19.0 LTS).
+- `npm install`
 - `npm run build`
 - output will be in the `xpi` directory.
 
