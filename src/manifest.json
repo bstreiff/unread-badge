@@ -3,7 +3,8 @@
 	"applications": {
 		"gecko": {
 			"id": "unread-badge@streiff.net",
-			"strict_min_version": "78.0"
+			"strict_min_version": "78.0",
+			"strict_max_version": "78.*"
 		}
 	},
 	"name": "Unread Badge",
@@ -13,7 +14,7 @@
 	},
 	"homepage_url": "https://github.com/bstreiff/unread-badge",
 
-	"version": "3.0.0",
+	"version": "3.0.1",
 	"icons": {
 		"48": "icon_48.png",
 		"96": "icon_96.png"
